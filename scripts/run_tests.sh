@@ -2,4 +2,4 @@
 set -euo pipefail
 
 echo "Running Julia tests..."
-julia --project=. tests/runtests.jl
+"${JULIA_CMD:-julia}" --project=. tests/runtests.jl

@@ -66,3 +66,4 @@ GEMINI.md
 
 # Out file
 /*.out
+outputs/toy/*.out

@@ -88,6 +88,67 @@ cat > "data/toy/expected/example_special_minsup2.out" << 'EOF'
 1 2 3 4 #SUP: 2
 EOF
 
+cat > "data/toy/example_sparse.txt" << 'EOF'
+1 2
+1 3
+2 4
+3 5
+4 5
+1 5
+EOF
+
+cat > "data/toy/expected/example_sparse_minsup2.out" << 'EOF'
+1 #SUP: 3
+2 #SUP: 2
+3 #SUP: 2
+4 #SUP: 2
+5 #SUP: 3
+EOF
+
+cat > "data/toy/example_with_infrequent_items.txt" << 'EOF'
+1 2 3
+1 2
+1 3
+2 3
+1 2 4
+5
+EOF
+
+cat > "data/toy/expected/example_with_infrequent_items_minsup2.out" << 'EOF'
+1 #SUP: 4
+2 #SUP: 4
+3 #SUP: 3
+1 2 #SUP: 3
+1 3 #SUP: 2
+2 3 #SUP: 2
+EOF
+
+cat > "data/toy/example_duplicates_long.txt" << 'EOF'
+1 2 3 4
+1 2 3 4
+1 2 3
+1 2
+2 3 4
+EOF
+
+cat > "data/toy/expected/example_duplicates_long_minsup2.out" << 'EOF'
+1 #SUP: 4
+2 #SUP: 5
+3 #SUP: 4
+4 #SUP: 3
+1 2 #SUP: 4
+1 3 #SUP: 3
+1 4 #SUP: 2
+2 3 #SUP: 4
+2 4 #SUP: 3
+3 4 #SUP: 3
+1 2 3 #SUP: 3
+1 2 4 #SUP: 2
+1 3 4 #SUP: 2
+2 3 4 #SUP: 3
+1 2 3 4 #SUP: 2
+EOF
+
 # ----------------------------
 # 3. Download benchmark datasets
 # ----------------------------
@@ -262,4 +323,3 @@ fi
 
 echo ""
 echo "Done."
-

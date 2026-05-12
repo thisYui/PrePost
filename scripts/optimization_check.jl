@@ -20,6 +20,21 @@ function selected_datasets()
             joinpath(PROJECT_ROOT, "data", "toy", "example_special_single_path.txt"),
             2,
         ),
+        OptimizationDataset(
+            "toy_sparse",
+            joinpath(PROJECT_ROOT, "data", "toy", "example_sparse.txt"),
+            2,
+        ),
+        OptimizationDataset(
+            "toy_with_infrequent_items",
+            joinpath(PROJECT_ROOT, "data", "toy", "example_with_infrequent_items.txt"),
+            2,
+        ),
+        OptimizationDataset(
+            "toy_duplicates_long",
+            joinpath(PROJECT_ROOT, "data", "toy", "example_duplicates_long.txt"),
+            2,
+        ),
     ]
 
     if get(ENV, "RUN_SMALL_BENCHMARK", "false") == "true"
@@ -46,7 +61,7 @@ function main()
     mkpath(joinpath(PROJECT_ROOT, "logs"))
 
     summary_path = joinpath(PROJECT_ROOT, "results", "optimization_summary.csv")
-    rows = String["dataset,minsup,version,itemsets,time_seconds,match"]
+    rows = String["dataset,minsup,itemsets,match,basic_seconds,optimized_seconds,speedup"]
     all_match = true
 
     println("Running Level 3 optimization comparison...")
@@ -60,36 +75,22 @@ function main()
         matches = compare_results(basic_result, optimized_result)
         all_match &= matches
 
-        push!(
-            rows,
-            join(
-                (
-                    dataset.name,
-                    string(dataset.minsup),
-                    "basic",
-                    string(length(basic_result)),
-                    string(round(basic_time; digits = 6)),
-                    csv_bool(matches),
-                ),
-                ",",
-            ),
-        )
-        push!(
-            rows,
-            join(
-                (
-                    dataset.name,
-                    string(dataset.minsup),
-                    "optimized",
-                    string(length(optimized_result)),
-                    string(round(optimized_time; digits = 6)),
-                    csv_bool(matches),
-                ),
-                ",",
-            ),
-        )
-
         speedup = optimized_time > 0 ? basic_time / optimized_time : Inf
+        push!(
+            rows,
+            join(
+                (
+                    dataset.name,
+                    string(dataset.minsup),
+                    string(length(optimized_result)),
+                    csv_bool(matches),
+                    string(round(basic_time; digits = 6)),
+                    string(round(optimized_time; digits = 6)),
+                    string(round(speedup; digits = 6)),
+                ),
+                ",",
+            ),
+        )
         println(
             dataset.name,
             " minsup=",

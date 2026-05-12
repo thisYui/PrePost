@@ -85,6 +85,72 @@ Write-Host "`n[2/7] Creating toy datasets..." -ForegroundColor Cyan
 1 2 3 4 #SUP: 2
 "@ | Set-Content -Encoding UTF8 "data\toy\expected\example_special_minsup2.out"
 
+# Dataset 3: sparse dataset
+@"
+1 2
+1 3
+2 4
+3 5
+4 5
+1 5
+"@ | Set-Content -Encoding UTF8 "data\toy\example_sparse.txt"
+
+@"
+1 #SUP: 3
+2 #SUP: 2
+3 #SUP: 2
+4 #SUP: 2
+5 #SUP: 3
+"@ | Set-Content -Encoding UTF8 "data\toy\expected\example_sparse_minsup2.out"
+
+
+# Dataset 4: dataset with infrequent items
+@"
+1 2 3
+1 2
+1 3
+2 3
+1 2 4
+5
+"@ | Set-Content -Encoding UTF8 "data\toy\example_with_infrequent_items.txt"
+
+@"
+1 #SUP: 4
+2 #SUP: 4
+3 #SUP: 3
+1 2 #SUP: 3
+1 3 #SUP: 2
+2 3 #SUP: 2
+"@ | Set-Content -Encoding UTF8 "data\toy\expected\example_with_infrequent_items_minsup2.out"
+
+
+# Dataset 5: duplicated transactions and long itemsets
+@"
+1 2 3 4
+1 2 3 4
+1 2 3
+1 2
+2 3 4
+"@ | Set-Content -Encoding UTF8 "data\toy\example_duplicates_long.txt"
+
+@"
+1 #SUP: 4
+2 #SUP: 5
+3 #SUP: 4
+4 #SUP: 3
+1 2 #SUP: 4
+1 3 #SUP: 3
+1 4 #SUP: 2
+2 3 #SUP: 4
+2 4 #SUP: 3
+3 4 #SUP: 3
+1 2 3 #SUP: 3
+1 2 4 #SUP: 2
+1 3 4 #SUP: 2
+2 3 4 #SUP: 3
+1 2 3 4 #SUP: 2
+"@ | Set-Content -Encoding UTF8 "data\toy\expected\example_duplicates_long_minsup2.out"
+
 # -----------------------------
 # 3. Tai benchmark datasets
 # -----------------------------

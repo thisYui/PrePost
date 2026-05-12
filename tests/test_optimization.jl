@@ -1,27 +1,33 @@
 @testset "Basic vs optimized PrePost" begin
-    basic_input = joinpath(TEST_ROOT, "data", "toy", "example_basic.txt")
-    basic_expected = joinpath(TEST_ROOT, "data", "toy", "expected", "example_basic_minsup2.out")
-    basic_db = read_spmf(basic_input)
-    basic_result = prepost_basic(basic_db, 2)
-    optimized_result = prepost_optimized(basic_db, 2)
-    expected_basic = parse_output_file(basic_expected)
+    cases = [
+        ("data/toy/example_basic.txt",
+         "data/toy/expected/example_basic_minsup2.out",
+         2),
+        ("data/toy/example_special_single_path.txt",
+         "data/toy/expected/example_special_minsup2.out",
+         2),
+        ("data/toy/example_sparse.txt",
+         "data/toy/expected/example_sparse_minsup2.out",
+         2),
+        ("data/toy/example_with_infrequent_items.txt",
+         "data/toy/expected/example_with_infrequent_items_minsup2.out",
+         2),
+        ("data/toy/example_duplicates_long.txt",
+         "data/toy/expected/example_duplicates_long_minsup2.out",
+         2),
+    ]
 
-    @test compare_results(basic_result, optimized_result)
-    @test compare_results(basic_result, expected_basic)
-    @test compare_results(optimized_result, expected_basic)
-    @test compare_results(prepost(basic_db, 2), optimized_result)
+    for (input_path, expected_path, minsup) in cases
+        db = read_spmf(joinpath(TEST_ROOT, input_path))
+        basic_result = prepost_basic(db, minsup)
+        optimized_result = prepost_optimized(db, minsup)
+        expected = parse_output_file(joinpath(TEST_ROOT, expected_path))
 
-    special_input = joinpath(TEST_ROOT, "data", "toy", "example_special_single_path.txt")
-    special_expected = joinpath(TEST_ROOT, "data", "toy", "expected", "example_special_minsup2.out")
-    special_db = read_spmf(special_input)
-    special_basic = prepost_basic(special_db, 2)
-    special_optimized = prepost_optimized(special_db, 2)
-    expected_special = parse_output_file(special_expected)
-
-    @test compare_results(special_basic, special_optimized)
-    @test compare_results(special_basic, expected_special)
-    @test compare_results(special_optimized, expected_special)
-    @test compare_results(prepost(special_db, 2), special_optimized)
+        @test compare_results(basic_result, optimized_result)
+        @test compare_results(basic_result, expected)
+        @test compare_results(optimized_result, expected)
+        @test compare_results(prepost(db, minsup), optimized_result)
+    end
 
     dense_db = TransactionDB([
         [1, 2, 3, 4],

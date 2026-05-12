@@ -1,0 +1,425 @@
+\section{Cài đặt}
+\label{sec:implementation}
+
+Chương này trình bày quá trình cài đặt thuật toán PrePost từ đầu bằng ngôn ngữ Julia. Mục tiêu của phần cài đặt là hiện thực đầy đủ các bước đã trình bày ở Chương 1 và minh họa bằng tay ở Chương 2: đọc cơ sở dữ liệu giao dịch, tiền xử lý theo ngưỡng $minsup$, xây dựng PPC-tree, gán mã $pre$ và $post$, tạo N-list, khai thác toàn bộ frequent itemset và xuất kết quả theo định dạng tương thích với SPMF.
+
+Việc cài đặt được tổ chức theo bốn mức yêu cầu. Level 1 tập trung vào tính đúng đắn của thuật toán cơ bản. Level 2 bổ sung kiểm thử tự động trên nhiều CSDL nhỏ. Level 3 cài đặt một phiên bản tối ưu và đối chiếu với phiên bản cơ bản. Level 4 hoàn thiện phần đọc/ghi file và giao diện dòng lệnh.
+
+\subsection{Môi trường và công cụ}
+\label{subsec:implementation-environment}
+
+Thuật toán được cài đặt bằng Julia, phù hợp với định hướng của đề bài là ưu tiên Julia phiên bản từ 1.9 trở lên. Mã nguồn được tổ chức dưới dạng một project Julia có module chính là \texttt{PrePostFIM}. Việc chạy chương trình, kiểm thử và đối chiếu kết quả được thực hiện thông qua các script dòng lệnh trên Windows PowerShell.
+
+Môi trường cài đặt được tóm tắt trong Bảng~\ref{tab:implementation-environment}.
+
+\begin{table}[H]
+\centering
+\caption{Môi trường và công cụ cài đặt}
+\label{tab:implementation-environment}
+\begin{tabular}{ll}
+\toprule
+Thành phần & Mô tả \\
+\midrule
+Ngôn ngữ lập trình & Julia \\
+Module chính & \texttt{PrePostFIM} \\
+Hệ điều hành kiểm thử & Windows, chạy qua PowerShell \\
+Định dạng input & SPMF, mỗi giao dịch là một dòng, các item cách nhau bằng khoảng trắng \\
+Định dạng output & SPMF, dạng \texttt{itemset \#SUP: support} \\
+Công cụ kiểm thử & \texttt{Test} của Julia và các script \texttt{.ps1} \\
+Script chính & \texttt{run\_tests.ps1}, \texttt{check\_algorithms.ps1}, \texttt{run\_optimization\_check.ps1} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Trong phạm vi chương này, các tập dữ liệu kiểm thử là các CSDL toy có kích thước nhỏ. Các tập này được dùng để kiểm tra tính đúng đắn của từng bước cài đặt và đối chiếu với kết quả mong đợi. Việc đánh giá trên các tập benchmark lớn và so sánh với SPMF được trình bày ở Chương thực nghiệm.
+
+\subsection{Tổ chức mã nguồn}
+\label{subsec:source-organization}
+
+Mã nguồn được chia thành nhiều file theo chức năng để giúp dễ kiểm thử và bảo trì. Module \texttt{PrePostFIM} đóng vai trò gom các thành phần con và export những hàm cần dùng ở bên ngoài. Cách tổ chức này giúp tách rõ bốn nhóm nhiệm vụ: biểu diễn dữ liệu, tiền xử lý, xây dựng cấu trúc PPC-tree/N-list và khai thác frequent itemset.
+
+Bảng~\ref{tab:source-files} mô tả vai trò của các file chính trong project.
+
+\begin{longtable}{p{0.28\textwidth}p{0.64\textwidth}}
+\caption{Tổ chức các file mã nguồn chính}
+\label{tab:source-files}\\
+\toprule
+File & Vai trò \\
+\midrule
+\endfirsthead
+\toprule
+File & Vai trò \\
+\midrule
+\endhead
+\texttt{PrePostFIM.jl} & Module chính, include các file thành phần và export các kiểu dữ liệu, hàm đọc/ghi, hàm khai thác và hàm kiểm tra kết quả. \\
+\texttt{structures/transaction\_db.jl} & Định nghĩa kiểu \texttt{TransactionDB} để lưu danh sách giao dịch và các hàm thống kê cơ bản như số giao dịch, số item, độ dài giao dịch trung bình. \\
+\texttt{structures/ppc\_tree.jl} & Định nghĩa \texttt{PPCNode}, \texttt{PPCTree}, thao tác chèn giao dịch vào cây, gán mã $pre$--$post$ và thu thập node. \\
+\texttt{structures/nlist.jl} & Định nghĩa \texttt{NListEntry}, tính support của N-list, tạo N-list cho item đơn và giao hai N-list. \\
+\texttt{utils/preprocessing.jl} & Đếm support item đơn, lọc item không phổ biến, xác định thứ tự toàn cục và sắp xếp/lọc giao dịch. \\
+\texttt{utils/io\_spmf.jl} & Đọc CSDL theo định dạng SPMF và ghi kết quả frequent itemset theo định dạng SPMF. \\
+\texttt{utils/metrics.jl} & Đọc file output, chuẩn hóa kết quả và so sánh hai tập kết quả. \\
+\texttt{utils/timer.jl} & Đo thời gian chạy của một hàm. \\
+\texttt{algorithm/output.jl} & Chuẩn hóa thứ tự itemset, định dạng một dòng kết quả output. \\
+\texttt{algorithm/mining.jl} & Cài đặt thủ tục khai thác đệ quy từ các N-list ứng viên. \\
+\texttt{algorithm/prepost.jl} & Xây dựng pipeline chính của thuật toán, gồm \texttt{prepost\_basic}, \texttt{prepost\_optimized} và \texttt{prepost}. \\
+\texttt{src/cli.jl} & Giao diện dòng lệnh, nhận tham số input, minsup và output. \\
+\bottomrule
+\end{longtable}
+
+Luồng include trong module chính được tổ chức theo thứ tự phụ thuộc: trước hết là các cấu trúc dữ liệu, sau đó là các tiện ích tiền xử lý/đọc ghi, cuối cùng là các file hiện thực thuật toán. Điều này giúp các hàm trong tầng thuật toán có thể sử dụng trực tiếp các kiểu dữ liệu và hàm tiện ích đã được định nghĩa trước.
+
+\subsection{Biểu diễn dữ liệu và cấu trúc chính}
+\label{subsec:data-structures}
+
+\subsubsection{Cơ sở dữ liệu giao dịch}
+
+CSDL giao dịch được biểu diễn bằng kiểu \texttt{TransactionDB}. Mỗi giao dịch là một vector các số nguyên, tương ứng với các item trong giao dịch. Toàn bộ CSDL là một vector các giao dịch:
+
+\begin{lstlisting}[caption={Biểu diễn CSDL giao dịch}, label={lst:transaction-db}]
+struct TransactionDB
+    transactions::Vector{Vector{Int}}
+end
+\end{lstlisting}
+
+Cách biểu diễn này đơn giản và phù hợp với định dạng SPMF, trong đó mỗi dòng input là một giao dịch và các item được mã hóa bằng số nguyên. Trước khi xây dựng PPC-tree, mỗi giao dịch được lọc bỏ các item không phổ biến, loại bỏ item lặp trong cùng giao dịch và sắp xếp theo thứ tự toàn cục.
+
+\subsubsection{PPC-tree}
+
+PPC-tree được cài đặt bằng hai kiểu dữ liệu chính là \texttt{PPCNode} và \texttt{PPCTree}. Mỗi node lưu item, số đếm, con trỏ đến cha, danh sách node con, mã $pre$ và mã $post$:
+
+\begin{lstlisting}[caption={Cấu trúc node trong PPC-tree}, label={lst:ppc-node}]
+mutable struct PPCNode
+    item::Union{Int,Nothing}
+    count::Int
+    parent::Union{PPCNode,Nothing}
+    children::Vector{PPCNode}
+    pre::Int
+    post::Int
+end
+\end{lstlisting}
+
+Node gốc có \texttt{item = nothing}. Khi chèn một giao dịch đã được sắp xếp, thuật toán đi từ gốc xuống theo thứ tự item trong giao dịch. Nếu node con mang item tương ứng đã tồn tại, trường \texttt{count} được tăng lên. Ngược lại, một node mới được tạo và thêm vào danh sách con.
+
+Sau khi toàn bộ giao dịch được chèn, cây được duyệt để gán mã $pre$ và $post$. Mã $pre$ được gán khi bắt đầu thăm node, còn mã $post$ được gán sau khi đã thăm toàn bộ các node con. Hai mã này là cơ sở để kiểm tra quan hệ tổ tiên -- hậu duệ giữa hai node.
+
+\subsubsection{N-list}
+
+Một phần tử của N-list được biểu diễn bằng bộ ba $(pre, post, count)$:
+
+\begin{lstlisting}[caption={Biểu diễn phần tử N-list}, label={lst:nlist-entry}]
+struct NListEntry
+    pre::Int
+    post::Int
+    count::Int
+end
+\end{lstlisting}
+
+Support của một N-list được tính bằng tổng trường \texttt{count} của tất cả phần tử trong N-list:
+
+\begin{equation}
+    sup(X) = \sum_{e \in NList(X)} e.count.
+    \label{eq:implementation-nlist-support}
+\end{equation}
+
+Để tạo N-list cho item đơn, chương trình duyệt toàn bộ node của PPC-tree, gom các node có cùng item và sắp xếp các entry theo mã $pre$. Để sinh N-list cho itemset mở rộng, chương trình kiểm tra quan hệ tổ tiên -- hậu duệ giữa N-list của prefix và N-list của item mở rộng. Điều kiện được dùng là:
+
+\begin{equation}
+    x.pre < y.pre \quad \text{và} \quad x.post > y.post.
+    \label{eq:implementation-ancestor-condition}
+\end{equation}
+
+Nếu điều kiện trên đúng, node $x$ là tổ tiên của node $y$, và entry của $y$ được giữ lại trong N-list của itemset mới.
+
+\subsection{Quy trình cài đặt thuật toán PrePost}
+\label{subsec:prepost-pipeline}
+
+Pipeline chính của thuật toán được cài đặt trong hàm tạo danh sách ứng viên ban đầu và hai hàm khai thác \texttt{prepost\_basic}, \texttt{prepost\_optimized}. Các bước xử lý được tóm tắt trong Hình~\ref{fig:implementation-pipeline}.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.92\textwidth}
+\ttfamily\small
+Input SPMF\\
+\textbar\\
+\textbar-- Đọc TransactionDB\\
+\textbar-- Đếm support item đơn\\
+\textbar-- Lọc item có support $<$ minsup\\
+\textbar-- Sắp xếp item theo support giảm dần, phá hòa theo mã item tăng dần\\
+\textbar-- Lọc và sắp xếp lại từng giao dịch\\
+\textbar-- Xây dựng PPC-tree\\
+\textbar-- Gán mã pre và post\\
+\textbar-- Tạo N-list cho item đơn\\
+\textbar-- Khai thác frequent itemset bằng giao N-list\\
+\textbar-- Chuẩn hóa và ghi output SPMF
+\end{minipage}%
+}
+\caption{Pipeline cài đặt thuật toán PrePost}
+\label{fig:implementation-pipeline}
+\end{figure}
+
+Các bước tiền xử lý được cài đặt như sau:
+
+\begin{enumerate}
+    \item Quét CSDL để đếm support của từng item đơn. Nếu một item xuất hiện nhiều lần trong cùng một giao dịch thì chỉ được tính một lần.
+    \item Lọc bỏ các item có support nhỏ hơn $minsup$.
+    \item Xác định thứ tự toàn cục. Item có support cao hơn đứng trước. Nếu hai item có cùng support, item có mã nhỏ hơn đứng trước.
+    \item Với từng giao dịch, loại bỏ item không phổ biến, loại bỏ item trùng lặp và sắp xếp theo thứ tự toàn cục.
+\end{enumerate}
+
+Sau bước tiền xử lý, các giao dịch được chèn vào PPC-tree. Từ PPC-tree đã gán mã $pre$--$post$, chương trình xây dựng N-list của các item đơn và khai thác frequent itemset theo chiều sâu.
+
+\subsection{Phiên bản cơ bản và phiên bản tối ưu}
+\label{subsec:basic-optimized}
+
+Project cài đặt hai phiên bản thuật toán:
+
+\begin{itemize}
+    \item \texttt{prepost\_basic}: phiên bản cơ bản, sinh các N-list ứng viên trước rồi mới lọc các ứng viên có support nhỏ hơn $minsup$.
+    \item \texttt{prepost\_optimized}: phiên bản tối ưu, kiểm tra support ngay sau khi giao N-list và chỉ đưa những ứng viên đủ $minsup$ vào danh sách mở rộng tiếp theo.
+\end{itemize}
+
+Sự khác biệt chính nằm ở vị trí tỉa ứng viên. Trong phiên bản cơ bản, các ứng viên được sinh ra đầy đủ ở mỗi mức rồi mới được lọc. Trong phiên bản tối ưu, thao tác lọc được thực hiện sớm hơn, ngay sau khi N-list mới được tạo. Điều này giúp giảm số lượng ứng viên truyền xuống các lời gọi đệ quy tiếp theo.
+
+Về mặt kết quả, hai phiên bản phải sinh ra cùng một tập frequent itemset. Do đó, phiên bản cơ bản được dùng như một đối chứng nội bộ để kiểm tra phiên bản tối ưu. Trong mã nguồn, hàm \texttt{prepost} mặc định gọi phiên bản tối ưu:
+
+\begin{lstlisting}[caption={Hàm PrePost mặc định}, label={lst:prepost-default}]
+prepost(db::TransactionDB, minsup::Int)::Vector{Tuple{Vector{Int},Int}} =
+    prepost_optimized(db, minsup)
+\end{lstlisting}
+
+Thủ tục khai thác đệ quy của phiên bản tối ưu có thể mô tả bằng giả mã trong Thuật toán~\ref{alg:implementation-mining}.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.92\textwidth}
+\ttfamily\small
+Mine(prefix, suffixCandidates, minsup)\\
+\quad for each candidate $(item, nlist)$ in suffixCandidates do\\
+\quad\quad supp $\leftarrow$ support(nlist)\\
+\quad\quad if supp $<$ minsup then continue\\
+\quad\quad newPrefix $\leftarrow$ prefix $\cup \{item\}$\\
+\quad\quad output $(newPrefix, supp)$\\
+\quad\quad nextCandidates $\leftarrow \emptyset$\\
+\quad\quad for each later candidate $(nextItem, nextNList)$ do\\
+\quad\quad\quad joined $\leftarrow$ join\_nlists(nlist, nextNList)\\
+\quad\quad\quad if support(joined) $\geq$ minsup then\\
+\quad\quad\quad\quad add $(nextItem, joined)$ to nextCandidates\\
+\quad\quad if nextCandidates is not empty then\\
+\quad\quad\quad Mine(newPrefix, nextCandidates, minsup)
+\end{minipage}%
+}
+\caption{Giả mã khai thác đệ quy bằng N-list trong phiên bản tối ưu}
+\label{alg:implementation-mining}
+\end{figure}
+
+Kỹ thuật tỉa sớm này không làm thay đổi kết quả vì mọi itemset có support nhỏ hơn $minsup$ không thể là frequent itemset. Đồng thời, theo tính chất anti-monotone của support, việc mở rộng một itemset không phổ biến cũng không thể tạo ra itemset phổ biến.
+
+\subsection{Xử lý đầu vào, đầu ra và giao diện dòng lệnh}
+\label{subsec:io-cli}
+
+Chương trình hỗ trợ đọc input theo định dạng SPMF. Mỗi dòng trong file input là một giao dịch, các item được phân tách bằng khoảng trắng. Các phần sau ký tự \texttt{\#} được xem là chú thích và bị bỏ qua khi đọc dữ liệu. Các dòng rỗng cũng được bỏ qua.
+
+Ví dụ một file input hợp lệ:
+
+\begin{lstlisting}[caption={Ví dụ input theo định dạng SPMF}, label={lst:spmf-input}]
+1 2 3
+1 3 4
+2 3 5
+1 2 3 5
+2 3 4
+\end{lstlisting}
+
+Kết quả output được ghi theo định dạng:
+
+\begin{lstlisting}[caption={Ví dụ output theo định dạng SPMF}, label={lst:spmf-output}]
+1 #SUP: 3
+2 #SUP: 4
+3 #SUP: 5
+1 2 #SUP: 2
+\end{lstlisting}
+
+Trước khi ghi output, các kết quả được chuẩn hóa. Mỗi itemset được sắp xếp tăng dần theo mã item. Toàn bộ danh sách kết quả được sắp xếp theo kích thước itemset tăng dần; nếu hai itemset có cùng kích thước thì sắp xếp theo thứ tự từ điển. Việc chuẩn hóa này giúp so sánh kết quả ổn định và không phụ thuộc vào thứ tự sinh ra trong quá trình đệ quy.
+
+Giao diện dòng lệnh được cài đặt trong file \texttt{src/cli.jl}. Chương trình nhận ba tham số bắt buộc: đường dẫn input, ngưỡng $minsup$ và đường dẫn output. Cú pháp chạy như sau:
+
+\begin{lstlisting}[caption={Cú pháp chạy chương trình}, label={lst:cli-usage}]
+julia --project=. src/cli.jl --input <path> --minsup <integer> --output <path>
+\end{lstlisting}
+
+Ví dụ chạy trên CSDL toy cơ sở:
+
+\begin{lstlisting}[caption={Ví dụ chạy chương trình trên CSDL toy}, label={lst:cli-example}]
+julia --project=. src/cli.jl \
+    --input data/toy/example_basic.txt \
+    --minsup 2 \
+    --output outputs/toy/output_basic.out
+\end{lstlisting}
+
+Sau khi chạy, chương trình in ra thông tin input, output, $minsup$, số lượng frequent itemset và thời gian chạy. Điều này giúp thuận tiện cho việc ghi log thực nghiệm.
+
+\subsection{Kiểm thử Level 1 và Level 2}
+\label{subsec:level1-level2-tests}
+
+\subsubsection{Mục tiêu kiểm thử}
+
+Mục tiêu kiểm thử là đảm bảo từng thành phần riêng lẻ và toàn bộ pipeline PrePost hoạt động đúng. Các test bao gồm:
+
+\begin{itemize}
+    \item kiểm tra đọc file SPMF;
+    \item kiểm tra đếm support item đơn;
+    \item kiểm tra lọc item không phổ biến và sắp xếp giao dịch;
+    \item kiểm tra xây dựng PPC-tree;
+    \item kiểm tra gán mã $pre$ và $post$;
+    \item kiểm tra tạo và giao N-list;
+    \item kiểm tra kết quả frequent itemset cuối cùng;
+    \item kiểm tra chuẩn hóa, ghi và đọc output.
+\end{itemize}
+
+Kết quả chạy unit test mới nhất được ghi nhận như sau:
+
+\begin{lstlisting}[caption={Kết quả chạy unit test}, label={lst:unit-test-log}]
+Running Julia tests...
+Starting PrePostFIM test suite...
+Test Summary: | Pass  Total  Time
+PrePostFIM    |  103    103  3.9s
+Finished PrePostFIM test suite.
+\end{lstlisting}
+
+Như vậy, toàn bộ 103 test đều vượt qua.
+
+\subsubsection{Bộ dữ liệu kiểm thử Level 2}
+
+Để đáp ứng yêu cầu Level 2, nhóm sử dụng năm CSDL toy khác nhau. Hai CSDL đầu là hai ví dụ minh họa tay ở Chương 2. Ba CSDL còn lại được thiết kế để kiểm tra các tình huống khác nhau: dữ liệu thưa, dữ liệu có item không phổ biến và dữ liệu có giao dịch trùng với itemset dài.
+
+Bảng~\ref{tab:level2-datasets} trình bày bộ dữ liệu kiểm thử Level 2.
+
+\begin{table}[H]
+\centering
+\caption{Năm CSDL toy dùng cho kiểm thử Level 2}
+\label{tab:level2-datasets}
+\begin{tabular}{p{0.29\textwidth}p{0.37\textwidth}cc}
+\toprule
+Dataset & Mục đích kiểm thử & $minsup$ & Số FI \\
+\midrule
+\texttt{example\_basic.txt} & Ví dụ cơ sở ở Chương 2 & 2 & 13 \\
+\texttt{example\_special\_single\_path.txt} & Trường hợp PPC-tree một nhánh & 2 & 15 \\
+\texttt{example\_sparse.txt} & Dữ liệu thưa, ít itemset dài & 2 & 5 \\
+\texttt{example\_with\_infrequent\_items.txt} & Có item không phổ biến cần bị loại & 2 & 6 \\
+\texttt{example\_duplicates\_long.txt} & Có giao dịch trùng và itemset dài & 2 & 15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Mỗi dataset có một file expected output tương ứng trong thư mục \texttt{data/toy/expected}. Script \texttt{check\_algorithms.ps1} chạy chương trình trên năm dataset, chuẩn hóa output rồi so sánh với expected output.
+
+Kết quả kiểm tra thuật toán được tóm tắt trong Bảng~\ref{tab:algorithm-check-results}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm tra thuật toán trên năm CSDL toy}
+\label{tab:algorithm-check-results}
+\begin{tabular}{lccc}
+\toprule
+Dataset & $minsup$ & Số FI sinh ra & Kết quả so sánh \\
+\midrule
+Basic & 2 & 13 & Passed \\
+Special single-path & 2 & 15 & Passed \\
+Sparse & 2 & 5 & Passed \\
+Infrequent-items & 2 & 6 & Passed \\
+Duplicates-long & 2 & 15 & Passed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Log thực thi của script kiểm tra thuật toán cho thấy cả năm dataset đều khớp expected output:
+
+\begin{lstlisting}[caption={Kết quả chạy script kiểm tra thuật toán}, label={lst:algorithm-check-log}]
+[4/5] Comparing results...
+[PASSED] Basic dataset output matches expected.
+[PASSED] Special dataset output matches expected.
+[PASSED] Sparse dataset output matches expected.
+[PASSED] Infrequent-items dataset output matches expected.
+[PASSED] Duplicates-long dataset output matches expected.
+
+========================================
+ Algorithm check PASSED
+========================================
+\end{lstlisting}
+
+Tỉ lệ đúng trên bộ kiểm thử Level 2 là:
+
+\begin{equation}
+    Accuracy = \frac{5}{5} \times 100\% = 100\%.
+    \label{eq:level2-accuracy}
+\end{equation}
+
+Kết quả này cho thấy chương trình sinh đúng số lượng frequent itemset và đúng support tương ứng trên toàn bộ năm CSDL toy.
+
+\subsection{Kiểm tra Level 3: so sánh phiên bản cơ bản và tối ưu}
+\label{subsec:level3-optimization}
+
+Level 3 yêu cầu áp dụng ít nhất một kỹ thuật tối ưu phù hợp với thuật toán và đo lường mức cải thiện so với bản cơ bản. Trong project này, kỹ thuật được dùng là tỉa sớm ứng viên trong quá trình giao N-list. Cụ thể, sau khi sinh N-list cho một ứng viên mở rộng, chương trình tính support ngay. Nếu support nhỏ hơn $minsup$, ứng viên đó không được đưa vào danh sách mở rộng tiếp theo.
+
+Script \texttt{run\_optimization\_check.ps1} so sánh hai hàm \texttt{prepost\_basic} và \texttt{prepost\_optimized} trên năm CSDL toy. Với mỗi dataset, script ghi nhận số lượng itemset, biến \texttt{match}, thời gian chạy của bản cơ bản, thời gian chạy của bản tối ưu và speedup.
+
+Kết quả được trình bày trong Bảng~\ref{tab:optimization-check-results}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả so sánh phiên bản cơ bản và phiên bản tối ưu}
+\label{tab:optimization-check-results}
+\begin{tabular}{lccccc}
+\toprule
+Dataset & $minsup$ & Số FI & Match & Basic (s) & Optimized (s) \\
+\midrule
+\texttt{toy\_basic} & 2 & 13 & true & 0.189 & 0.000 \\
+\texttt{toy\_special\_single\_path} & 2 & 15 & true & 0.081 & 0.000 \\
+\texttt{toy\_sparse} & 2 & 5 & true & 0.000 & 0.000 \\
+\texttt{toy\_with\_infrequent\_items} & 2 & 6 & true & 0.000 & 0.000 \\
+\texttt{toy\_duplicates\_long} & 2 & 15 & true & 0.000 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Toàn bộ năm dataset đều có \texttt{match=true}, nghĩa là phiên bản tối ưu sinh ra cùng tập frequent itemset với phiên bản cơ bản. Đây là điều kiện quan trọng nhất khi đánh giá một tối ưu hóa thuật toán: tối ưu không được làm thay đổi kết quả.
+
+Một số giá trị thời gian được làm tròn về 0 giây do các CSDL toy rất nhỏ và thời gian chạy thấp hơn độ phân giải đo thời gian trong log. Vì vậy, các giá trị speedup như \texttt{Infx} chỉ nên xem là tín hiệu tham khảo, không nên diễn giải là tốc độ tăng vô hạn. Đánh giá hiệu năng đáng tin cậy hơn cần được thực hiện trên các tập benchmark lớn ở Chương thực nghiệm. Trong phạm vi Chương 3, kết quả quan trọng là bản tối ưu khớp hoàn toàn với bản cơ bản trên toàn bộ bộ kiểm thử.
+
+\subsection{Đáp ứng các mức yêu cầu cài đặt}
+\label{subsec:implementation-level-summary}
+
+Bảng~\ref{tab:implementation-level-summary} tổng hợp mức độ đáp ứng các yêu cầu cài đặt.
+
+\begin{longtable}{p{0.13\textwidth}p{0.45\textwidth}p{0.31\textwidth}}
+\caption{Tổng hợp mức độ đáp ứng các yêu cầu cài đặt}
+\label{tab:implementation-level-summary}\\
+\toprule
+Mức & Yêu cầu & Kết quả thực hiện \\
+\midrule
+\endfirsthead
+\toprule
+Mức & Yêu cầu & Kết quả thực hiện \\
+\midrule
+\endhead
+Level 1 & Cài đặt đúng thuật toán, xuất toàn bộ frequent itemset và support tương ứng. & Đã cài đặt pipeline PrePost đầy đủ từ đọc dữ liệu, tiền xử lý, PPC-tree, N-list đến khai thác FI. Kết quả toy cơ sở sinh 13 FI và toy single-path sinh 15 FI, khớp expected. \\
+Level 2 & Kiểm thử tự động trên ít nhất 5 CSDL khác nhau, bao gồm CSDL từ ví dụ tay. & Đã kiểm thử trên 5 CSDL toy: basic, special single-path, sparse, infrequent-items và duplicates-long. Unit test đạt 103/103; algorithm check pass 5/5 dataset. \\
+Level 3 & Tối ưu hóa bộ nhớ/tốc độ và đo mức cải thiện so với bản cơ bản. & Đã cài đặt bản \texttt{prepost\_optimized} với tỉa sớm ứng viên sau khi giao N-list. So sánh với \texttt{prepost\_basic} cho kết quả \texttt{match=true} trên 5/5 dataset. \\
+Level 4 & Hỗ trợ đọc input/output định dạng SPMF và tham số dòng lệnh cho $minsup$, input, output. & Đã có \texttt{read\_spmf}, \texttt{write\_spmf\_output} và CLI nhận \texttt{--input}, \texttt{--minsup}, \texttt{--output}. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Nhận xét về cài đặt}
+\label{subsec:implementation-discussion}
+
+Cài đặt hiện tại có một số ưu điểm chính. Thứ nhất, mã nguồn được chia module rõ ràng, giúp kiểm thử độc lập từng thành phần. Thứ hai, output được chuẩn hóa trước khi ghi và so sánh, nhờ đó việc kiểm tra kết quả không bị ảnh hưởng bởi thứ tự sinh itemset trong quá trình đệ quy. Thứ ba, project duy trì đồng thời phiên bản cơ bản và phiên bản tối ưu, cho phép kiểm tra chéo nội bộ trước khi đánh giá trên dữ liệu lớn.
+
+Tuy nhiên, một số điểm cần lưu ý vẫn còn tồn tại. Bộ kiểm thử ở Chương 3 chủ yếu sử dụng dữ liệu toy nên chưa phản ánh đầy đủ hiệu năng trên dữ liệu lớn. Ngoài ra, thời gian chạy của các dataset nhỏ rất thấp, khiến việc đo speedup chưa ổn định. Vì vậy, các kết luận về tốc độ ở Chương này chỉ có giá trị kiểm tra ban đầu. Phần đánh giá hiệu năng đầy đủ cần dựa trên các tập benchmark lớn, nhiều mức $minsup$ khác nhau và so sánh với SPMF trong Chương thực nghiệm.
+
+\subsection{Kết luận chương}
+\label{subsec:implementation-conclusion}
+
+Chương này đã trình bày quá trình cài đặt thuật toán PrePost bằng Julia. Chương trình được xây dựng từ đầu, bao gồm các thành phần đọc dữ liệu, tiền xử lý, xây dựng PPC-tree, gán mã $pre$--$post$, tạo N-list, khai thác frequent itemset và xuất kết quả theo định dạng SPMF. Các yêu cầu từ Level 1 đến Level 4 đều đã được đáp ứng ở mức cài đặt.
+
+Kết quả kiểm thử cho thấy 103/103 unit test đều vượt qua. Script kiểm tra thuật toán chạy thành công trên năm CSDL toy khác nhau và toàn bộ output đều khớp expected. Phiên bản tối ưu cũng cho kết quả trùng khớp với phiên bản cơ bản trên năm dataset. Những kết quả này cung cấp cơ sở để chuyển sang Chương thực nghiệm, nơi thuật toán sẽ được đánh giá trên các tập dữ liệu benchmark lớn và so sánh với SPMF.

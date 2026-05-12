@@ -10,6 +10,7 @@ println("Starting PrePostFIM test suite...")
     include("test_ppc_tree.jl")
     include("test_nlist.jl")
     include("test_correctness.jl")
+    include("test_level2_toy_datasets.jl")
     include("test_optimization.jl")
     include("test_benchmark.jl")
 end

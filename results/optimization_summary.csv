@@ -1,5 +1,6 @@
-dataset,minsup,version,itemsets,time_seconds,match
-toy_basic,2,basic,13,0.531,true
-toy_basic,2,optimized,13,0.001,true
-toy_special_single_path,2,basic,15,0.151,true
-toy_special_single_path,2,optimized,15,0.0,true
+dataset,minsup,itemsets,match,basic_seconds,optimized_seconds,speedup
+toy_basic,2,13,true,0.189,0.0,Inf
+toy_special_single_path,2,15,true,0.081,0.0,Inf
+toy_sparse,2,5,true,0.0,0.0,Inf
+toy_with_infrequent_items,2,6,true,0.0,0.0,Inf
+toy_duplicates_long,2,15,true,0.0,0.0,Inf
