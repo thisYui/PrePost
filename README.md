@@ -104,6 +104,7 @@ PrePost/
 │   ├── check_algorithms.ps1
 │   ├── run_optimization_check.ps1
 │   ├── run_benchmarks.ps1
+│   ├── download_and_run_spmf_fpgrowth.ps1
 │   └── clean_outputs.ps1
 │
 ├── scripts/             # Bash scripts for Linux/macOS and helper Julia scripts
@@ -121,6 +122,10 @@ PrePost/
 ├── outputs/             # Generated outputs, ignored by Git
 ├── results/             # Generated experiment summaries, ignored by Git
 ├── logs/                # Generated logs, ignored by Git
+│
+├── spmf/
+│   ├── spmf.jar
+│   └── reference_outputs/
 │
 ├── notebooks/
 │   ├── demo.ipynb
@@ -183,7 +188,7 @@ Sau đó chạy kiểm thử:
 .\cmd\run_tests.ps1
 ```
 
-Kiểm tra thuật toán trên hai toy datasets:
+Kiểm tra thuật toán trên 5 toy datasets:
 
 ```powershell
 .\cmd\check_algorithms.ps1
@@ -193,6 +198,12 @@ Kiểm tra so sánh phiên bản cơ bản và tối ưu cho Level 3:
 
 ```powershell
 .\cmd\run_optimization_check.ps1
+```
+
+Nếu cần tải SPMF và sinh output tham chiếu bằng FP-Growth:
+
+```powershell
+.\cmd\download_and_run_spmf_fpgrowth.ps1
 ```
 
 Nếu muốn chạy benchmark cho Chương 4:
@@ -243,7 +254,7 @@ Chạy kiểm thử:
 bash scripts/run_tests.sh
 ```
 
-Kiểm tra thuật toán trên hai toy datasets:
+Kiểm tra thuật toán trên 5 toy datasets:
 
 ```bash
 bash scripts/check_algorithms.sh
@@ -368,15 +379,13 @@ Các nhóm test chính:
 
 ```text
 Running Julia tests...
-Precompiling PrePostFIM finished.
-  1 dependency successfully precompiled in 1 seconds
 Starting PrePostFIM test suite...
 Test Summary: | Pass  Total  Time
-PrePostFIM    |   81     81  5.7s
+PrePostFIM    |  103    103  3.9s
 Finished PrePostFIM test suite.
 ```
 
-## 10. Kiểm tra thuật toán trên toy datasets
+## 10. Kiểm tra thuật toán trên 5 toy datasets
 
 Chạy trên Windows:
 
@@ -398,18 +407,42 @@ Checking PrePost Algorithm
 [1/5] Checking required files...
 Required files found.
 
-[2/5] Running basic toy dataset...
+[2/5] Running 5 toy datasets...
+Running Basic dataset...
 Frequent itemsets: 13
-
-[3/5] Running special single-path dataset...
+Running Special dataset...
 Frequent itemsets: 15
+Running Sparse dataset...
+Frequent itemsets: 5
+Running Infrequent-items dataset...
+Frequent itemsets: 6
+Running Duplicates-long dataset...
+Frequent itemsets: 15
+All toy datasets finished.
 
-[5/5] Comparing results...
+[3/5] Normalizing outputs...
+Normalization finished.
+
+[4/5] Comparing results...
 [PASSED] Basic dataset output matches expected.
 [PASSED] Special dataset output matches expected.
+[PASSED] Sparse dataset output matches expected.
+[PASSED] Infrequent-items dataset output matches expected.
+[PASSED] Duplicates-long dataset output matches expected.
 
+[5/5] Final status...
 Algorithm check PASSED
 ```
+
+Bộ toy datasets dùng cho Level 2:
+
+| Dataset | Tình huống kiểm thử | minsup | Số FI |
+|---|---|---:|---:|
+| `example_basic.txt` | Ví dụ cơ sở ở Chương 2 | 2 | 13 |
+| `example_special_single_path.txt` | PPC-tree một nhánh | 2 | 15 |
+| `example_sparse.txt` | Dữ liệu thưa, ít giao nhau | 2 | 5 |
+| `example_with_infrequent_items.txt` | Có item không phổ biến cần bị loại | 2 | 6 |
+| `example_duplicates_long.txt` | Giao dịch trùng và itemset dài | 2 | 15 |
 
 ## 11. Level 3 - So sánh phiên bản cơ bản và tối ưu
 
@@ -446,8 +479,11 @@ results/optimization_summary.csv
 Kết quả gần nhất:
 
 ```text
-toy_basic minsup=2 itemsets=13 match=true basic=0.531s optimized=0.001s speedup=531.039x
-toy_special_single_path minsup=2 itemsets=15 match=true basic=0.151s optimized=0.000s speedup=Inf
+toy_basic minsup=2 itemsets=13 match=true basic=0.189s optimized=0.0s speedup=Infx
+toy_special_single_path minsup=2 itemsets=15 match=true basic=0.081s optimized=0.0s speedup=Infx
+toy_sparse minsup=2 itemsets=5 match=true basic=0.0s optimized=0.0s speedup=Infx
+toy_with_infrequent_items minsup=2 itemsets=6 match=true basic=0.0s optimized=0.0s speedup=Infx
+toy_duplicates_long minsup=2 itemsets=15 match=true basic=0.0s optimized=0.0s speedup=Infx
 ```
 
 Lưu ý: Hai toy datasets có kích thước nhỏ nên thời gian chạy của phiên bản tối ưu có thể gần bằng 0 giây. Kết quả này chủ yếu dùng để kiểm tra rằng hai phiên bản sinh cùng itemset và support. Phần đánh giá hiệu năng đầy đủ được thực hiện ở Chương 4.
@@ -540,15 +576,128 @@ lift(X => Y) = confidence(X => Y) / support(Y)
 
 SPMF chỉ được sử dụng làm chương trình tham chiếu để kiểm tra độ đúng. Nhóm không sử dụng hoặc sao chép mã nguồn từ SPMF.
 
+Trong project này, SPMF được đặt trong thư mục riêng:
+
+```text
+spmf/
+├── spmf.jar
+└── reference_outputs/
+```
+
+Trong đó:
+
+- `spmf/spmf.jar` là file chạy chính của SPMF.
+- `spmf/reference_outputs/` chứa các output tham chiếu do SPMF sinh ra.
+- Thuật toán SPMF dùng để sinh reference output là **FP-Growth** cho bài toán frequent itemset mining.
+- Output của SPMF chỉ dùng để so sánh độ đúng, không dùng trong quá trình cài đặt thuật toán PrePost.
+
+### 15.1. Tải SPMF và sinh output tham chiếu bằng FP-Growth
+
+Trên Windows, chạy script:
+
+```powershell
+.\cmd\download_and_run_spmf_fpgrowth.ps1
+```
+
+Script này thực hiện các bước:
+
+1. Kiểm tra Java có sẵn trong `PATH` hay không.
+2. Tạo thư mục `spmf/` nếu chưa tồn tại.
+3. Tải `spmf.jar` nếu file này chưa có.
+4. Tạo thư mục `spmf/reference_outputs/`.
+5. Chạy FP-Growth của SPMF trên các benchmark datasets.
+6. Ghi output tham chiếu vào `spmf/reference_outputs/`.
+
+Các output tham chiếu được đặt tên theo dataset và minsup, ví dụ:
+
+```text
+spmf/reference_outputs/chess_fpgrowth_minsup2557.out
+spmf/reference_outputs/mushroom_fpgrowth_minsup2438.out
+spmf/reference_outputs/retail_fpgrowth_minsup441.out
+spmf/reference_outputs/T10I4D100K_fpgrowth_minsup1000.out
+```
+
+### 15.2. Minsup dùng khi chạy SPMF
+
+Cài đặt Julia của nhóm nhận `minsup` là **support tuyệt đối**. Vì vậy khi chạy SPMF để so sánh, nhóm cũng dùng cùng giá trị minsup tuyệt đối.
+
+| Dataset | Số transaction | Mức chọn tương ứng | minsup tuyệt đối |
+|---|---:|---:|---:|
+| Chess | 3,196 | 80% | 2,557 |
+| Mushroom | 8,124 | 30% | 2,438 |
+| Retail | 88,162 | 0.5% | 441 |
+| T10I4D100K | 100,000 | 1% | 1,000 |
+
+Công thức quy đổi nếu cần:
+
+```text
+minsup_abs = ceil(minsup_percent * số_giao_dịch)
+```
+
+Ví dụ với Chess:
+
+```text
+ceil(0.80 * 3196) = 2557
+```
+
+### 15.3. Lệnh chạy FP-Growth thủ công
+
+Nếu không dùng script, có thể chạy trực tiếp như sau:
+
+```powershell
+java -jar spmf\spmf.jar run FPGrowth_itemsets `
+  dataenchmark\chess.txt `
+  spmf
+eference_outputs\chess_fpgrowth_minsup2557.out `
+  2557
+```
+
+Các dataset còn lại:
+
+```powershell
+java -jar spmf\spmf.jar run FPGrowth_itemsets `
+  dataenchmark\mushroom.txt `
+  spmf
+eference_outputs\mushroom_fpgrowth_minsup2438.out `
+  2438
+
+java -jar spmf\spmf.jar run FPGrowth_itemsets `
+  dataenchmark
+etail.txt `
+  spmf
+eference_outputs
+etail_fpgrowth_minsup441.out `
+  441
+
+java -jar spmf\spmf.jar run FPGrowth_itemsets `
+  dataenchmark\T10I4D100K.txt `
+  spmf
+eference_outputs\T10I4D100K_fpgrowth_minsup1000.out `
+  1000
+```
+
+### 15.4. Quy trình so sánh với SPMF
+
 Quy trình so sánh:
 
 1. Chạy thuật toán của nhóm trên cùng input và cùng `minsup`.
-2. Chạy SPMF trên cùng input và cùng `minsup`.
-3. Chuẩn hóa output.
+2. Chạy SPMF FP-Growth trên cùng input và cùng `minsup`.
+3. Chuẩn hóa output của cả hai bên.
 4. So sánh:
    - số lượng frequent itemsets;
    - support của từng itemset;
    - tỉ lệ itemset khớp hoàn toàn.
+
+Ví dụ chạy Julia trên Chess với cùng `minsup = 2557`:
+
+```powershell
+julia --project=. src\cli.jl `
+  --input dataenchmark\chess.txt `
+  --minsup 2557 `
+  --output outputsenchmark\ours\chess_minsup2557.out
+```
+
+Lưu ý: Nếu SPMF báo lỗi khi truyền `minsup` dạng số nguyên, có thể đổi sang dạng phần trăm tương ứng, ví dụ `80%`. Khi báo cáo, cần ghi rõ hai cách biểu diễn này là tương đương trên cùng dataset.
 
 ## 16. Reproducibility
 
@@ -573,6 +722,7 @@ Windows:
 .\cmd\run_tests.ps1
 .\cmd\check_algorithms.ps1
 .\cmd\run_optimization_check.ps1
+.\cmd\download_and_run_spmf_fpgrowth.ps1
 ```
 
 Linux/macOS:
