@@ -1,0 +1,275 @@
+\documentclass[12pt,a4paper]{article}
+
+% ================== PACKAGES ==================
+\usepackage[margin=2.54cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{xurl}
+\usepackage{float}
+\usepackage{tocloft}
+\usepackage{csquotes}
+
+% ================== REFERENCES ==================
+\usepackage[
+    backend=biber,
+    style=ieee,
+    sorting=none
+]{biblatex}
+
+\addbibresource{references.bib}
+
+% ================== FONT & SPACING ==================
+\onehalfspacing
+
+% ================== PARAGRAPH FORMAT ==================
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+
+% ================== HYPERREF SETUP ==================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=cyan,
+    pdftitle={Khai thác tập phổ biến bằng thuật toán PrePost},
+    pdfauthor={Group 06}
+}
+
+% ================== HEADER & FOOTER ==================
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Thuật toán PrePost}
+\rhead{Khai thác tập phổ biến}
+\rfoot{Trang \thepage}
+
+% ================== TITLE FORMAT ==================
+\titleformat{\section}
+    {\Large\bfseries}
+    {\thesection}
+    {1em}
+    {}
+
+\titleformat{\subsection}
+    {\large\bfseries}
+    {\thesubsection}
+    {1em}
+    {}
+
+\titleformat{\subsubsection}
+    {\normalsize\bfseries}
+    {\thesubsubsection}
+    {1em}
+    {}
+
+% ================== LISTING SETUP ==================
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red}
+}
+
+% ================== CUSTOM COMMANDS ==================
+\newcommand{\abbr}[2]{#1 & #2 \\}
+
+% ================== DOCUMENT ==================
+\begin{document}
+
+% ================== TITLE PAGE ==================
+\begin{titlepage}
+\begin{center}
+
+{\large
+ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH\\
+TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN\\
+KHOA CÔNG NGHỆ THÔNG TIN
+}\\[3.0cm]
+
+\includegraphics[width=4cm]{logo-khtn.png}\\[1.5cm]
+
+{\color{blue}\LARGE \textbf{LAB 2}}\\[0.5cm]
+{\LARGE \textbf{KHAI THÁC TẬP PHỔ BIẾN}}\\[0.3cm]
+{\LARGE \textbf{BẰNG THUẬT TOÁN PREPOST}}\\[0.8cm]
+
+\begin{tabular}{ll}
+\textbf{Nhóm} & Group 06 \\[0.2cm]
+\textbf{Mã số sinh viên} & \textbf{Họ và tên} \\[0.2cm]
+22120187 & TRẦN THIÊN LỘC \\
+23120095 & LƯU ĐỨC TOÀN \\
+23120245 & NGUYỄN QUANG DUY \\
+23120258 & LƯU TRỌNG HIẾU \\
+23120260 & VĂN ĐÌNH HIẾU \\
+\end{tabular}
+
+\vfill
+
+\begin{tabular}{ll}
+\textbf{Giảng viên hướng dẫn} & GS.TS Lê Hoài Bắc \\
+                              & Th.S Lê Nhựt Nam \\
+\end{tabular}
+
+\vfill
+
+\begin{tabular}{ll}
+\textbf{Môn học} & Khai thác dữ liệu và ứng dụng \\
+\end{tabular}
+
+\vspace{0.8cm}
+
+\textbf{Thành phố Hồ Chí Minh -- 2026}
+
+\end{center}
+\end{titlepage}
+
+% ================== FRONT MATTER ==================
+\pagenumbering{roman}
+
+% ================== ACKNOWLEDGEMENT ==================
+\section*{Lời cảm ơn}
+\addcontentsline{toc}{section}{Lời cảm ơn}
+
+Nhóm chúng em xin gửi lời cảm ơn chân thành đến quý thầy cô phụ trách học phần
+\textit{Khai thác dữ liệu và ứng dụng} đã hướng dẫn, cung cấp kiến thức nền tảng
+và định hướng thực hiện đồ án.
+
+Trong quá trình thực hiện, nhóm đã có cơ hội tìm hiểu sâu hơn về bài toán khai thác
+tập phổ biến, các cấu trúc dữ liệu đặc trưng và phương pháp đánh giá hiệu năng thuật
+toán trên các tập dữ liệu benchmark. Những kiến thức này giúp nhóm hiểu rõ hơn vai
+trò của Frequent Itemset Mining trong khai phá dữ liệu và các ứng dụng thực tế như
+phân tích giỏ hàng.
+
+Do giới hạn về thời gian và kinh nghiệm, báo cáo có thể còn thiếu sót. Nhóm mong
+nhận được góp ý từ quý thầy cô để hoàn thiện hơn.
+
+\newpage
+
+% ================== ABSTRACT ==================
+\section*{Tóm tắt}
+\addcontentsline{toc}{section}{Tóm tắt}
+
+Khai thác tập phổ biến là một bài toán nền tảng trong khai phá dữ liệu, được sử dụng
+rộng rãi trong sinh luật kết hợp, phân tích giỏ hàng, phát hiện mẫu trong log hệ thống
+và nhiều lĩnh vực khác. Đồ án này tập trung nghiên cứu và cài đặt thuật toán
+\textbf{PrePost}, một thuật toán khai thác tập phổ biến dựa trên cấu trúc
+\textbf{PPC-tree} và \textbf{N-list}.
+
+Khác với các thuật toán sinh ứng viên như Apriori, PrePost mã hóa quan hệ tổ tiên
+-- hậu duệ giữa các node trên cây bằng cặp thứ tự duyệt trước và duyệt sau. Từ đó,
+thuật toán có thể tính support của các itemset thông qua thao tác trên N-list mà không
+cần quét lại toàn bộ cơ sở dữ liệu giao dịch nhiều lần.
+
+Trong đồ án, nhóm trình bày cơ sở lý thuyết của bài toán Frequent Itemset Mining,
+phân tích chi tiết thuật toán PrePost, minh họa thuật toán bằng ví dụ thủ công, cài đặt
+thuật toán bằng ngôn ngữ Julia, kiểm tra độ đúng bằng cách so sánh với SPMF và đánh
+giá hiệu năng trên các tập dữ liệu benchmark. Ngoài ra, nhóm áp dụng kết quả frequent
+itemset vào bài toán phân tích giỏ hàng thông qua việc sinh luật kết hợp.
+
+\textbf{Từ khóa:} Frequent Itemset Mining, PrePost, PPC-tree, N-list, association rules,
+market basket analysis.
+
+\newpage
+
+% ================== ABBREVIATIONS ==================
+\section*{Danh mục từ viết tắt}
+\addcontentsline{toc}{section}{Danh mục từ viết tắt}
+
+\begin{longtable}{>{\bfseries}p{3cm}p{11cm}}
+FIM & Frequent Itemset Mining -- Khai thác tập phổ biến. \\
+FI & Frequent Itemset -- Tập phổ biến. \\
+CFI & Closed Frequent Itemset -- Tập phổ biến đóng. \\
+MFI & Maximal Frequent Itemset -- Tập phổ biến tối đại. \\
+TDB & Transaction Database -- Cơ sở dữ liệu giao dịch. \\
+TID & Transaction Identifier -- Mã định danh giao dịch. \\
+minsup & Minimum Support -- Ngưỡng hỗ trợ tối thiểu. \\
+sup & Support -- Độ hỗ trợ của một itemset. \\
+conf & Confidence -- Độ tin cậy của một luật kết hợp. \\
+lift & Lift -- Độ đo mức độ phụ thuộc giữa hai vế của luật kết hợp. \\
+PPC-tree & Pre-order Post-order Coding Tree -- Cây mã hóa theo thứ tự duyệt trước và duyệt sau. \\
+pre & Pre-order code -- Mã thứ tự duyệt trước của một node trong PPC-tree. \\
+post & Post-order code -- Mã thứ tự duyệt sau của một node trong PPC-tree. \\
+N-list & Node-list -- Danh sách mã hóa các node dùng để tính support trong PrePost. \\
+SPMF & Sequential Pattern Mining Framework -- Bộ công cụ tham chiếu cho khai phá mẫu. \\
+CLI & Command Line Interface -- Giao diện dòng lệnh. \\
+RAM & Random Access Memory -- Bộ nhớ truy cập ngẫu nhiên. \\
+CSV & Comma-Separated Values -- Định dạng dữ liệu bảng phân tách bằng dấu phẩy. \\
+\end{longtable}
+
+\newpage
+
+% ================== LIST OF FIGURES ==================
+\listoffigures
+\addcontentsline{toc}{section}{Danh mục hình vẽ}
+\newpage
+
+% ================== LIST OF TABLES ==================
+\listoftables
+\addcontentsline{toc}{section}{Danh mục bảng biểu}
+\newpage
+
+% ================== TABLE OF CONTENTS ==================
+\tableofcontents
+\newpage
+
+% ================== MAIN MATTER ==================
+\pagenumbering{arabic}
+% ================== CHAPTER 1 ==================
+% File: chapters/chapter1_theory.tex
+\input{chapters/chapter1_theory}
+
+% ================== CHAPTER 2 ==================
+% File: chapters/chapter2_manual_examples.tex
+\input{chapters/chapter2_manual_examples}
+
+% ================== CHAPTER 3 ==================
+\section{Cài đặt thuật toán PrePost}
+
+% Nội dung Chương 3 viết ở đây.
+
+% ================== CHAPTER 4 ==================
+\section{Thực nghiệm và đánh giá}
+
+% Nội dung Chương 4 viết ở đây.
+
+% ================== CHAPTER 5 ==================
+\section{Ứng dụng thực tế}
+
+% Nội dung Chương 5 viết ở đây.
+
+% ================== REFERENCES ==================
+\newpage
+\addcontentsline{toc}{section}{Tài liệu tham khảo}
+
+% Hiển thị toàn bộ tài liệu trong references.bib.
+% Khi báo cáo hoàn thiện, có thể bỏ \nocite{*} nếu tất cả tài liệu đều đã được cite trong nội dung.
+\nocite{*}
+
+\printbibliography[title={Tài liệu tham khảo}]
+
+% ================== APPENDIX ==================
+\newpage
+\appendix
+
+\section{Phụ lục}
+
+% Nội dung phụ lục nếu có.
+
+\end{document}

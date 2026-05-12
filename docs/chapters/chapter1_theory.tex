@@ -1,0 +1,291 @@
+\section{Nền tảng lý thuyết}
+
+\subsection{Bài toán khai thác tập phổ biến}
+
+FIM là bài toán tìm tất cả các tập mục xuất hiện thường xuyên trong một TDB. Đây là bài toán nền tảng của khai phá luật kết hợp và nhiều ứng dụng khai phá mẫu khác như phân tích giỏ hàng, phân tích log hệ thống và phát hiện mẫu trong dữ liệu sinh học.
+
+Cho tập tất cả các mục là:
+
+\begin{equation}
+    I = \{i_1, i_2, \ldots, i_m\}.
+    \label{eq:item-universe}
+\end{equation}
+
+Một itemset là một tập con của $I$. Một TDB được ký hiệu là:
+
+\begin{equation}
+    D = \{T_1, T_2, \ldots, T_n\},
+    \label{eq:transaction-database}
+\end{equation}
+
+trong đó mỗi giao dịch $T_j \subseteq I$ là một tập các mục xuất hiện cùng nhau trong một lần quan sát. Mỗi giao dịch thường được gắn với một TID.
+
+Với một itemset $X \subseteq I$, giao dịch $T_j$ chứa $X$ nếu và chỉ nếu:
+
+\begin{equation}
+    X \subseteq T_j.
+    \label{eq:transaction-contains-itemset}
+\end{equation}
+
+Độ hỗ trợ tuyệt đối của $X$ trên TDB $D$ được định nghĩa là số lượng giao dịch chứa $X$:
+
+\begin{equation}
+    sup_{abs}(X) = |\{T_j \in D \mid X \subseteq T_j\}|.
+    \label{eq:absolute-support}
+\end{equation}
+
+Độ hỗ trợ tương đối của $X$ là tỉ lệ giao dịch chứa $X$ trên toàn bộ TDB:
+
+\begin{equation}
+    sup_{rel}(X) = \frac{sup_{abs}(X)}{|D|}.
+    \label{eq:relative-support}
+\end{equation}
+
+Trong báo cáo này, nếu không nói rõ, ký hiệu $sup(X)$ được hiểu là độ hỗ trợ tuyệt đối.
+
+Cho một ngưỡng hỗ trợ tối thiểu $minsup$. Một itemset $X$ được gọi là FI nếu:
+
+\begin{equation}
+    sup(X) \geq minsup.
+    \label{eq:frequent-itemset-condition}
+\end{equation}
+
+Bài toán FIM có thể được phát biểu hình thức như sau: với TDB $D$ và ngưỡng $minsup$, tìm toàn bộ tập:
+
+\begin{equation}
+    FI(D, minsup) = \{X \subseteq I \mid sup(X) \geq minsup\}.
+    \label{eq:fim-problem}
+\end{equation}
+
+Ngoài FI thông thường, hai khái niệm quan trọng khác là CFI và MFI. Một FI $X$ được gọi là CFI nếu không tồn tại FI $Y$ sao cho:
+
+\begin{equation}
+    X \subset Y \quad \text{và} \quad sup(X) = sup(Y).
+    \label{eq:closed-frequent-itemset}
+\end{equation}
+
+Nói cách khác, $X$ là CFI nếu không thể thêm mục nào vào $X$ mà vẫn giữ nguyên support.
+
+Một FI $X$ được gọi là MFI nếu không tồn tại FI $Y$ sao cho:
+
+\begin{equation}
+    X \subset Y.
+    \label{eq:maximal-frequent-itemset}
+\end{equation}
+
+MFI là những FI không có tập cha nào cũng frequent. Quan hệ giữa ba loại tập có thể viết như sau:
+
+\begin{equation}
+    MFI \subseteq CFI \subseteq FI.
+    \label{eq:fi-cfi-mfi-relation}
+\end{equation}
+
+MFI giúp biểu diễn kết quả ngắn gọn hơn nhưng làm mất thông tin support của các tập con. CFI vẫn giữ đủ thông tin support để suy ra support của các FI thông thường trong nhiều trường hợp.
+
+\subsection{Tính chất Apriori}
+
+Một tính chất nền tảng của FIM là tính chất Apriori, còn gọi là tính chất đơn điệu giảm của support. Với hai itemset $X$ và $Y$ thỏa $X \subseteq Y$, ta luôn có:
+
+\begin{equation}
+    sup(Y) \leq sup(X).
+    \label{eq:apriori-property}
+\end{equation}
+
+Điều này đúng vì mọi giao dịch chứa $Y$ chắc chắn cũng chứa $X$, nhưng không phải giao dịch chứa $X$ nào cũng chứa $Y$. Do đó:
+
+\begin{equation}
+    \{T_j \in D \mid Y \subseteq T_j\}
+    \subseteq
+    \{T_j \in D \mid X \subseteq T_j\}.
+    \label{eq:apriori-set-inclusion}
+\end{equation}
+
+Suy ra số phần tử của tập bên trái không lớn hơn số phần tử của tập bên phải, tức là $sup(Y) \leq sup(X)$.
+
+Từ tính chất trên, ta có hai hệ quả quan trọng:
+
+\begin{itemize}
+    \item Nếu một itemset $X$ không phổ biến, tức $sup(X) < minsup$, thì mọi tập cha $Y \supset X$ cũng không phổ biến.
+    \item Nếu một itemset $Y$ phổ biến, thì mọi tập con $X \subseteq Y$ cũng phổ biến.
+\end{itemize}
+
+Tính chất này là cơ sở để tỉa không gian tìm kiếm trong hầu hết các thuật toán FIM, từ Apriori đến các thuật toán theo chiều sâu như Eclat, FP-Growth và PrePost.
+
+\subsection{Tổng quan thuật toán PrePost}
+
+PrePost là thuật toán FIM dựa trên cấu trúc cây và danh sách mã hóa node. Thuật toán được đề xuất nhằm giảm chi phí sinh ứng viên và giảm số lần quét TDB so với các thuật toán dựa trên sinh ứng viên như Apriori. Thay vì biểu diễn itemset bằng danh sách giao dịch chứa itemset như Eclat, PrePost biểu diễn itemset bằng N-list, một cấu trúc được xây dựng từ PPC-tree.
+
+Ý tưởng cốt lõi của PrePost gồm ba bước chính:
+
+\begin{enumerate}
+    \item Quét TDB để tìm các frequent 1-itemset và sắp xếp item theo support giảm dần.
+    \item Xây dựng PPC-tree từ các giao dịch đã được lọc và sắp xếp. Mỗi node trên cây được gán hai mã: $pre$ và $post$.
+    \item Tạo N-list cho từng item phổ biến. Sau đó khai thác các itemset dài hơn bằng cách kết hợp N-list và kiểm tra quan hệ tổ tiên -- hậu duệ giữa các node.
+\end{enumerate}
+
+Điểm khác biệt quan trọng của PrePost là quan hệ bao hàm giữa các node trên PPC-tree có thể được kiểm tra bằng cặp mã $(pre, post)$. Với hai node $u$ và $v$, node $u$ là tổ tiên của node $v$ nếu:
+
+\begin{equation}
+    pre(u) < pre(v) \quad \text{và} \quad post(u) > post(v).
+    \label{eq:ancestor-condition}
+\end{equation}
+
+Nhờ đó, khi cần tính support của itemset mở rộng, thuật toán không phải quét lại TDB gốc mà chỉ thao tác trên các N-list đã được xây dựng.
+
+\subsection{Cấu trúc dữ liệu PPC-tree}
+
+PPC-tree là cây tiền tố được xây dựng từ TDB sau khi loại bỏ các item không phổ biến và sắp xếp các item còn lại theo một thứ tự toàn cục. Thông thường, thứ tự toàn cục được chọn theo support giảm dần để tăng khả năng chia sẻ tiền tố giữa các giao dịch.
+
+Mỗi node trên PPC-tree lưu các thông tin chính:
+
+\begin{itemize}
+    \item \textbf{item-name}: tên item tương ứng với node.
+    \item \textbf{count}: số lượng giao dịch đi qua node đó.
+    \item \textbf{children}: danh sách các node con.
+    \item \textbf{pre}: chỉ số duyệt trước của node.
+    \item \textbf{post}: chỉ số duyệt sau của node.
+\end{itemize}
+
+Ví dụ minh họa dạng tổng quát của một PPC-tree được trình bày trong Hình~\ref{fig:ppctree-example}. Trong Chương 2, nhóm sẽ xây dựng chi tiết PPC-tree từ một TDB cụ thể và tính toán đầy đủ các giá trị $pre$, $post$, $count$.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.75\textwidth}
+\ttfamily\small
+Root\\
+\textbar-- a: count = 4, pre = 1, post = 6\\
+\textbar\hspace*{1em}\textbar-- b: count = 3, pre = 2, post = 4\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- c: count = 2, pre = 3, post = 1\\
+\textbar\hspace*{1em}\textbar-- c: count = 1, pre = 4, post = 3\\
+\textbar-- b: count = 1, pre = 5, post = 5
+\end{minipage}%
+}
+\caption{Minh họa cấu trúc PPC-tree với mã $pre$ và $post$.}
+\label{fig:ppctree-example}
+\end{figure}
+
+Cặp mã $(pre, post)$ giúp xác định nhanh quan hệ tổ tiên -- hậu duệ. Đây là nền tảng để PrePost chuyển bài toán kiểm tra giao dịch chứa itemset thành bài toán thao tác trên danh sách node.
+
+\subsection{Cấu trúc dữ liệu N-list}
+
+N-list của một item hoặc itemset là danh sách các bộ ba:
+
+\begin{equation}
+    (pre, post, count),
+    \label{eq:nlist-entry}
+\end{equation}
+
+trong đó mỗi bộ ba tương ứng với một node trên PPC-tree. Với một item đơn $i$, $NList(i)$ chứa tất cả các node mang nhãn $i$ trên PPC-tree. Support của item $i$ được tính bằng tổng count của các phần tử trong N-list:
+
+\begin{equation}
+    sup(i) = \sum_{(pre, post, count) \in NList(i)} count.
+    \label{eq:nlist-single-support}
+\end{equation}
+
+Với itemset có nhiều item, N-list được xây dựng bằng cách kết hợp N-list của các itemset con. Giả sử cần tính N-list của itemset $XY$ từ $NList(X)$ và $NList(Y)$. Thuật toán xét các cặp phần tử $(x, y)$ sao cho node tương ứng với $x$ là tổ tiên của node tương ứng với $y$ trên PPC-tree. Điều kiện tổ tiên được kiểm tra bằng:
+
+\begin{equation}
+    pre(x) < pre(y) \quad \text{và} \quad post(x) > post(y).
+    \label{eq:nlist-join-condition}
+\end{equation}
+
+Nếu điều kiện đúng, phần tử tương ứng từ $Y$ được dùng để tạo N-list của $XY$. Support của $XY$ tiếp tục được tính bằng tổng count trong $NList(XY)$:
+
+\begin{equation}
+    sup(XY) = \sum_{(pre, post, count) \in NList(XY)} count.
+    \label{eq:nlist-itemset-support}
+\end{equation}
+
+Nhờ cách biểu diễn này, PrePost tránh phải sinh và kiểm tra ứng viên bằng cách quét TDB nhiều lần. Phần lớn chi phí tính toán được chuyển sang thao tác trên các N-list, vốn thường nhỏ hơn đáng kể so với TDB ban đầu khi dữ liệu có nhiều tiền tố chung.
+
+\subsection{Giả mã thuật toán PrePost}
+
+Giả mã tổng quát của thuật toán PrePost được trình bày trong Thuật toán~\ref{alg:prepost}. Phần cài đặt cụ thể bằng Julia sẽ được trình bày ở Chương 3.
+
+\begin{lstlisting}[caption={Giả mã tổng quát của thuật toán PrePost}, label={alg:prepost}]
+Input : Transaction database D, minimum support minsup
+Output: Set of all frequent itemsets FI
+
+1. Scan D to compute support of each item.
+2. Remove infrequent items whose support < minsup.
+3. Sort frequent items by descending support to obtain global order F.
+4. For each transaction T in D:
+       a. Remove infrequent items from T.
+       b. Sort remaining items according to F.
+       c. Insert the sorted transaction into the PPC-tree.
+5. Traverse the PPC-tree to assign pre-order and post-order codes.
+6. Construct N-list for each frequent 1-itemset.
+7. FI = all frequent 1-itemsets.
+8. Call Mine(prefix = empty, candidate_set = frequent 1-itemsets).
+
+Procedure Mine(prefix, candidate_set):
+1. For each item X in candidate_set:
+       a. new_prefix = prefix union {X}
+       b. Output new_prefix as a frequent itemset.
+       c. suffix_set = empty.
+       d. For each item Y after X in candidate_set:
+              i.   Compute NList(new_prefix union {Y})
+                   from NList(new_prefix) and NList(Y).
+              ii.  If support >= minsup, add Y to suffix_set.
+       e. Mine(new_prefix, suffix_set).
+\end{lstlisting}
+
+Trong giả mã trên, thủ tục \texttt{Mine} khai thác không gian tìm kiếm theo chiều sâu. Với mỗi tiền tố hiện tại, thuật toán thử mở rộng tiền tố bằng các item đứng sau theo thứ tự toàn cục. Nếu N-list của itemset mở rộng có support không nhỏ hơn $minsup$, itemset đó được giữ lại và tiếp tục được mở rộng ở các mức sâu hơn.
+
+\subsection{Phân tích độ phức tạp}
+
+Độ phức tạp của PrePost phụ thuộc vào số lượng giao dịch, số lượng item, độ dài trung bình của giao dịch, ngưỡng $minsup$ và mức độ chia sẻ tiền tố giữa các giao dịch.
+
+Gọi $n = |D|$ là số giao dịch, $m = |I|$ là số item phân biệt và $\ell$ là độ dài trung bình của giao dịch sau khi loại bỏ item không phổ biến. Việc quét TDB để tính support của các item đơn có chi phí xấp xỉ:
+
+\begin{equation}
+    O(n \cdot \ell).
+    \label{eq:scan-complexity}
+\end{equation}
+
+Sau khi lọc và sắp xếp item, việc xây dựng PPC-tree cũng có chi phí phụ thuộc vào tổng số item xuất hiện trong các giao dịch đã lọc. Nếu dùng cấu trúc ánh xạ phù hợp để tìm node con, chi phí xây dựng cây thường gần với:
+
+\begin{equation}
+    O(n \cdot \ell).
+    \label{eq:tree-building-complexity}
+\end{equation}
+
+Tuy nhiên, nếu việc tìm node con được cài đặt bằng cách duyệt tuyến tính danh sách con, chi phí có thể tăng theo số lượng node con tại từng mức.
+
+Chi phí khai thác itemset phụ thuộc trực tiếp vào số lượng FI sinh ra và kích thước của các N-list. Trong trường hợp tốt, khi $minsup$ cao hoặc dữ liệu có ít item phổ biến, số lượng itemset cần xét nhỏ, N-list ngắn, thuật toán chạy nhanh. Trong trường hợp trung bình, chi phí chủ yếu nằm ở các phép kết hợp N-list. Trong trường hợp xấu nhất, số lượng FI có thể tăng theo hàm mũ theo số item, đặc biệt khi dữ liệu dày đặc và $minsup$ thấp. Khi đó, mọi thuật toán FIM hoàn chỉnh đều phải đối mặt với kích thước đầu ra rất lớn.
+
+Độ phức tạp không gian của PrePost gồm hai phần chính:
+
+\begin{itemize}
+    \item Bộ nhớ lưu PPC-tree, phụ thuộc vào số node được tạo ra. Số node tối đa không vượt quá tổng số item trong toàn bộ giao dịch sau lọc.
+    \item Bộ nhớ lưu các N-list, phụ thuộc vào số lượng node liên quan đến từng itemset và số lượng itemset trung gian được giữ trong quá trình khai thác.
+\end{itemize}
+
+Với dữ liệu có nhiều tiền tố chung, PPC-tree có thể nén dữ liệu tốt. Ngược lại, với dữ liệu thưa và ít chia sẻ tiền tố, số node có thể lớn, làm tăng chi phí bộ nhớ.
+
+Các yếu tố ảnh hưởng chính đến hiệu năng của PrePost gồm:
+
+\begin{enumerate}
+    \item \textbf{Ngưỡng minsup}: $minsup$ càng thấp thì số FI càng lớn, dẫn đến nhiều phép kết hợp N-list hơn.
+    \item \textbf{Độ dày của dữ liệu}: Dữ liệu dày đặc thường tạo nhiều itemset dài, làm tăng kích thước không gian tìm kiếm.
+    \item \textbf{Độ dài giao dịch trung bình}: Giao dịch càng dài thì chi phí xây dựng cây và số tổ hợp item có thể xuất hiện càng lớn.
+    \item \textbf{Mức độ chia sẻ tiền tố}: Chia sẻ tiền tố càng cao thì PPC-tree càng nén tốt, N-list có thể ngắn hơn.
+    \item \textbf{Cách cài đặt phép giao N-list}: Đây là phần ảnh hưởng lớn đến thời gian chạy ở giai đoạn khai thác.
+\end{enumerate}
+
+\subsection{So sánh lịch sử với các thuật toán FIM khác}
+
+Apriori là một trong các thuật toán kinh điển đầu tiên cho FIM. Thuật toán này dựa trên tính chất Apriori để sinh ứng viên theo từng mức. Ưu điểm của Apriori là dễ hiểu và dễ cài đặt, nhưng nhược điểm lớn là phải sinh rất nhiều candidate itemset và phải quét TDB nhiều lần.
+
+FP-Growth cải thiện Apriori bằng cách xây dựng FP-tree để nén TDB và khai thác theo chiến lược chia để trị. Thuật toán này tránh sinh ứng viên trực tiếp, nhưng vẫn cần xây dựng nhiều conditional FP-tree trong quá trình khai thác, gây chi phí đáng kể với một số loại dữ liệu.
+
+Eclat chuyển từ biểu diễn ngang sang biểu diễn dọc bằng tidset. Support của itemset được tính bằng phép giao tidset. Cách tiếp cận này thường hiệu quả khi tidset không quá lớn, nhưng với TDB lớn, các tidset có thể tiêu tốn nhiều bộ nhớ.
+
+PrePost kế thừa ý tưởng khai thác theo chiều sâu và sử dụng biểu diễn mã hóa dựa trên cây. Thuật toán dùng PPC-tree để mã hóa TDB, sau đó dùng N-list để biểu diễn itemset. Nhờ cặp mã $pre$ và $post$, quan hệ tổ tiên giữa các node có thể được kiểm tra nhanh mà không cần truy cập lại TDB gốc. Vì vậy, PrePost giải quyết một phần hạn chế của Apriori về sinh ứng viên và hạn chế của FP-Growth về việc xây dựng nhiều cây điều kiện.
+
+Tuy nhiên, PrePost vẫn có hạn chế. Khi dữ liệu thưa, ít chia sẻ tiền tố hoặc $minsup$ rất thấp, số lượng N-list trung gian có thể lớn, dẫn đến chi phí bộ nhớ cao. Ngoài ra, hiệu năng của thuật toán phụ thuộc nhiều vào cách cài đặt cấu trúc cây, cách lưu N-list và cách tối ưu phép kết hợp N-list. Các thuật toán sau này như PrePost+ tiếp tục cải tiến PrePost bằng các chiến lược tỉa không gian tìm kiếm, chẳng hạn Children--Parent Equivalence pruning.
+
+\subsection{Kết luận chương}
+
+Chương này đã trình bày nền tảng lý thuyết của FIM, bao gồm các khái niệm TDB, support, FI, CFI, MFI và tính chất Apriori. Trên cơ sở đó, chương đã giới thiệu thuật toán PrePost, tập trung vào hai cấu trúc dữ liệu chính là PPC-tree và N-list, đồng thời phân tích giả mã, độ phức tạp và vị trí của PrePost trong dòng phát triển các thuật toán FIM. Những nội dung này là nền tảng để Chương 2 trình bày ví dụ minh họa thủ công và Chương 3 triển khai thuật toán bằng ngôn ngữ Julia.

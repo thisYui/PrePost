@@ -151,16 +151,9 @@ Group_ID/
 │   │   └── chapter5_application.tex
 │   │
 │   └── figures/
-│       ├── ppc_tree_example.png
-│       ├── prepost_order_example.png
-│       ├── nlist_construction.png
-│       └── algorithm_workflow.png
 │
-├── scripts/
-│   ├── download_datasets.sh
-│   ├── run_all_tests.sh
-│   ├── run_all_experiments.sh
-│   └── clean_outputs.sh
+├── scripts/    # for Linux/MacOS users
+├── cmd/        # for Windows users
 │
 └── spmf/
     ├── spmf.jar

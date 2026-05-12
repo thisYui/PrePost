@@ -1,0 +1,571 @@
+\section{Ví dụ minh họa tay thuật toán PrePost}
+
+Chương này trình bày hai ví dụ minh họa thuật toán PrePost hoàn toàn bằng tay. Ví dụ thứ nhất là ví dụ cơ sở dùng để mô tả đầy đủ các bước của thuật toán, từ TDB ban đầu, tính support, xây dựng PPC-tree, gán mã $pre$ và $post$, tạo N-list, sinh FI và kiểm tra chéo kết quả. Ví dụ thứ hai minh họa tình huống đặc biệt khi PPC-tree chỉ có một nhánh, qua đó cho thấy khả năng nén dữ liệu của cấu trúc cây trong PrePost.
+
+\subsection{Ví dụ 1: Cơ sở}
+
+\subsubsection{Cơ sở dữ liệu giao dịch ban đầu}
+
+Xét TDB đồ chơi gồm 5 giao dịch và 5 item phân biệt. Ngưỡng hỗ trợ tối thiểu được chọn là:
+
+\begin{equation}
+    minsup = 2.
+    \label{eq:chapter2-basic-minsup}
+\end{equation}
+
+TDB ban đầu được trình bày trong Bảng~\ref{tab:basic-tdb}.
+
+\begin{table}[H]
+\centering
+\caption{TDB của ví dụ cơ sở}
+\label{tab:basic-tdb}
+\begin{tabular}{cl}
+\toprule
+TID & Giao dịch \\
+\midrule
+$T_1$ & $\{1, 2, 3\}$ \\
+$T_2$ & $\{1, 3, 4\}$ \\
+$T_3$ & $\{2, 3, 5\}$ \\
+$T_4$ & $\{1, 2, 3, 5\}$ \\
+$T_5$ & $\{2, 3, 4\}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Bước 1: Tính support của các item đơn}
+
+Quét TDB một lần để tính support của từng item. Kết quả được trình bày trong Bảng~\ref{tab:basic-single-support}.
+
+\begin{table}[H]
+\centering
+\caption{Support của các item đơn trong ví dụ cơ sở}
+\label{tab:basic-single-support}
+\begin{tabular}{cc}
+\toprule
+Item & Support \\
+\midrule
+1 & 3 \\
+2 & 4 \\
+3 & 5 \\
+4 & 2 \\
+5 & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Vì tất cả các item đều có support không nhỏ hơn $minsup$, toàn bộ 5 item đều được giữ lại. Thứ tự toàn cục được chọn theo support giảm dần. Khi hai item có cùng support, nhóm dùng thứ tự tăng dần theo mã item để phá vỡ hòa. Do đó thứ tự toàn cục là:
+
+\begin{equation}
+    3 \succ 2 \succ 1 \succ 4 \succ 5.
+    \label{eq:basic-global-order}
+\end{equation}
+
+\subsubsection{Bước 2: Sắp xếp lại các giao dịch}
+
+Sau khi lọc item không phổ biến và sắp xếp theo thứ tự toàn cục trong Công thức~\ref{eq:basic-global-order}, các giao dịch được biến đổi như trong Bảng~\ref{tab:basic-sorted-tdb}.
+
+\begin{table}[H]
+\centering
+\caption{TDB sau khi sắp xếp theo thứ tự toàn cục}
+\label{tab:basic-sorted-tdb}
+\begin{tabular}{cll}
+\toprule
+TID & Giao dịch ban đầu & Giao dịch sau sắp xếp \\
+\midrule
+$T_1$ & $\{1,2,3\}$ & $\langle 3,2,1\rangle$ \\
+$T_2$ & $\{1,3,4\}$ & $\langle 3,1,4\rangle$ \\
+$T_3$ & $\{2,3,5\}$ & $\langle 3,2,5\rangle$ \\
+$T_4$ & $\{1,2,3,5\}$ & $\langle 3,2,1,5\rangle$ \\
+$T_5$ & $\{2,3,4\}$ & $\langle 3,2,4\rangle$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Bước 3: Xây dựng PPC-tree}
+
+Các giao dịch sau khi sắp xếp được chèn lần lượt vào PPC-tree.
+
+\textbf{Chèn $T_1 = \langle 3,2,1\rangle$:} tạo đường đi $3 \rightarrow 2 \rightarrow 1$, mỗi node có $count = 1$.
+
+\textbf{Chèn $T_2 = \langle 3,1,4\rangle$:} node $3$ đã tồn tại nên tăng $count(3)$ lên 2. Sau đó tạo nhánh mới $1 \rightarrow 4$ dưới node $3$.
+
+\textbf{Chèn $T_3 = \langle 3,2,5\rangle$:} tăng $count(3)$ lên 3, tăng $count(2)$ dưới $3$ lên 2, sau đó tạo node $5$ dưới node $2$.
+
+\textbf{Chèn $T_4 = \langle 3,2,1,5\rangle$:} tăng $count(3)$ lên 4, tăng $count(2)$ dưới $3$ lên 3, tăng $count(1)$ dưới $2$ lên 2, sau đó tạo node $5$ dưới node $1$.
+
+\textbf{Chèn $T_5 = \langle 3,2,4\rangle$:} tăng $count(3)$ lên 5, tăng $count(2)$ dưới $3$ lên 4, sau đó tạo node $4$ dưới node $2$.
+
+PPC-tree sau khi chèn toàn bộ giao dịch được minh họa trong Hình~\ref{fig:basic-ppctree-structure}.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.78\textwidth}
+\ttfamily\small
+Root\\
+\textbar-- 3: count = 5\\
+\textbar\hspace*{1em}\textbar-- 2: count = 4\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 1: count = 2\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 5: count = 1\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 5: count = 1\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 4: count = 1\\
+\textbar\hspace*{1em}\textbar-- 1: count = 1\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 4: count = 1
+\end{minipage}%
+}
+\caption{PPC-tree của ví dụ cơ sở trước khi gán mã $pre$ và $post$}
+\label{fig:basic-ppctree-structure}
+\end{figure}
+
+\subsubsection{Bước 4: Gán mã pre và post}
+
+Duyệt cây theo thứ tự trước để gán mã $pre$, sau đó dùng thứ tự sau để gán mã $post$. Kết quả được trình bày trong Bảng~\ref{tab:basic-prepost-codes}.
+
+\begin{table}[H]
+\centering
+\caption{Các node của PPC-tree sau khi gán mã $pre$ và $post$}
+\label{tab:basic-prepost-codes}
+\begin{tabular}{ccccc}
+\toprule
+Ký hiệu node & Item & Count & $pre$ & $post$ \\
+\midrule
+$n_1$ & 3 & 5 & 1 & 8 \\
+$n_2$ & 2 & 4 & 2 & 5 \\
+$n_3$ & 1 & 2 & 3 & 2 \\
+$n_4$ & 5 & 1 & 4 & 1 \\
+$n_5$ & 5 & 1 & 5 & 3 \\
+$n_6$ & 4 & 1 & 6 & 4 \\
+$n_7$ & 1 & 1 & 7 & 7 \\
+$n_8$ & 4 & 1 & 8 & 6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+PPC-tree có mã $pre$ và $post$ được minh họa trong Hình~\ref{fig:basic-ppctree-prepost}.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.85\textwidth}
+\ttfamily\small
+Root\\
+\textbar-- 3: count = 5, pre = 1, post = 8\\
+\textbar\hspace*{1em}\textbar-- 2: count = 4, pre = 2, post = 5\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 1: count = 2, pre = 3, post = 2\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 5: count = 1, pre = 4, post = 1\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 5: count = 1, pre = 5, post = 3\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 4: count = 1, pre = 6, post = 4\\
+\textbar\hspace*{1em}\textbar-- 1: count = 1, pre = 7, post = 7\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 4: count = 1, pre = 8, post = 6
+\end{minipage}%
+}
+\caption{PPC-tree của ví dụ cơ sở sau khi gán mã $pre$ và $post$}
+\label{fig:basic-ppctree-prepost}
+\end{figure}
+
+\subsubsection{Bước 5: Tạo N-list cho các item đơn}
+
+Từ PPC-tree đã gán mã, N-list của từng item được xây dựng bằng cách gom tất cả các node có cùng item. Kết quả được trình bày trong Bảng~\ref{tab:basic-single-nlists}.
+
+\begin{table}[H]
+\centering
+\caption{N-list của các item đơn trong ví dụ cơ sở}
+\label{tab:basic-single-nlists}
+\begin{tabular}{clc}
+\toprule
+Item & N-list & Support \\
+\midrule
+3 & $\{(1,8,5)\}$ & 5 \\
+2 & $\{(2,5,4)\}$ & 4 \\
+1 & $\{(3,2,2), (7,7,1)\}$ & 3 \\
+4 & $\{(6,4,1), (8,6,1)\}$ & 2 \\
+5 & $\{(4,1,1), (5,3,1)\}$ & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Support của một item được tính bằng tổng trường $count$ trong N-list. Ví dụ:
+
+\begin{equation}
+    sup(1) = 2 + 1 = 3.
+    \label{eq:basic-support-item-1}
+\end{equation}
+
+\subsubsection{Bước 6: Sinh frequent 2-itemset bằng N-list}
+
+Để sinh N-list của một 2-itemset, PrePost kiểm tra quan hệ tổ tiên -- hậu duệ giữa các node thông qua điều kiện:
+
+\begin{equation}
+    pre(x) < pre(y) \quad \text{và} \quad post(x) > post(y).
+    \label{eq:basic-ancestor-condition}
+\end{equation}
+
+Ví dụ, để tính support của itemset $\{2,3\}$, xét node của item $3$ là $(1,8,5)$ và node của item $2$ là $(2,5,4)$. Vì:
+
+\begin{equation}
+    1 < 2 \quad \text{và} \quad 8 > 5,
+    \label{eq:basic-23-ancestor-check}
+\end{equation}
+
+nên node $3$ là tổ tiên của node $2$. Do đó:
+
+\begin{equation}
+    NList(3,2) = \{(2,5,4)\},
+    \label{eq:basic-nlist-32}
+\end{equation}
+
+và:
+
+\begin{equation}
+    sup(\{2,3\}) = 4.
+    \label{eq:basic-support-23}
+\end{equation}
+
+Tương tự, các frequent 2-itemset thu được bằng thao tác trên N-list được trình bày trong Bảng~\ref{tab:basic-frequent-2-itemsets}.
+
+\begin{table}[H]
+\centering
+\caption{Các frequent 2-itemset trong ví dụ cơ sở}
+\label{tab:basic-frequent-2-itemsets}
+\begin{tabular}{clc}
+\toprule
+Itemset & N-list theo thứ tự PPC-tree & Support \\
+\midrule
+$\{1,2\}$ & $NList(2,1)=\{(3,2,2)\}$ & 2 \\
+$\{1,3\}$ & $NList(3,1)=\{(3,2,2),(7,7,1)\}$ & 3 \\
+$\{2,3\}$ & $NList(3,2)=\{(2,5,4)\}$ & 4 \\
+$\{2,5\}$ & $NList(2,5)=\{(4,1,1),(5,3,1)\}$ & 2 \\
+$\{3,4\}$ & $NList(3,4)=\{(6,4,1),(8,6,1)\}$ & 2 \\
+$\{3,5\}$ & $NList(3,5)=\{(4,1,1),(5,3,1)\}$ & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Các 2-itemset khác có support nhỏ hơn $minsup$ nên bị loại.
+
+\subsubsection{Bước 7: Sinh frequent 3-itemset}
+
+Từ các frequent 2-itemset, thuật toán tiếp tục mở rộng theo chiều sâu. Các frequent 3-itemset thu được là $\{1,2,3\}$ và $\{2,3,5\}$.
+
+Với itemset $\{1,2,3\}$, theo thứ tự trên PPC-tree ta xét $NList(3,2)$ và item $1$. Node $(3,2,2)$ của item $1$ là hậu duệ của node $(2,5,4)$ của item $2$, nên:
+
+\begin{equation}
+    NList(3,2,1) = \{(3,2,2)\}.
+    \label{eq:basic-nlist-321}
+\end{equation}
+
+Do đó:
+
+\begin{equation}
+    sup(\{1,2,3\}) = 2.
+    \label{eq:basic-support-123}
+\end{equation}
+
+Với itemset $\{2,3,5\}$, hai node của item $5$ là hậu duệ của node $(2,5,4)$ của item $2$, nên:
+
+\begin{equation}
+    NList(3,2,5) = \{(4,1,1),(5,3,1)\}.
+    \label{eq:basic-nlist-325}
+\end{equation}
+
+Do đó:
+
+\begin{equation}
+    sup(\{2,3,5\}) = 1 + 1 = 2.
+    \label{eq:basic-support-235}
+\end{equation}
+
+Kết quả frequent 3-itemset được trình bày trong Bảng~\ref{tab:basic-frequent-3-itemsets}.
+
+\begin{table}[H]
+\centering
+\caption{Các frequent 3-itemset trong ví dụ cơ sở}
+\label{tab:basic-frequent-3-itemsets}
+\begin{tabular}{clc}
+\toprule
+Itemset & N-list theo thứ tự PPC-tree & Support \\
+\midrule
+$\{1,2,3\}$ & $NList(3,2,1)=\{(3,2,2)\}$ & 2 \\
+$\{2,3,5\}$ & $NList(3,2,5)=\{(4,1,1),(5,3,1)\}$ & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Không có frequent 4-itemset nào vì mọi mở rộng tiếp theo đều có support nhỏ hơn $minsup$.
+
+\subsubsection{Tập kết quả cuối cùng}
+
+Tập FI cuối cùng của ví dụ cơ sở được trình bày trong Bảng~\ref{tab:basic-final-fi}.
+
+\begin{table}[H]
+\centering
+\caption{Tập FI cuối cùng của ví dụ cơ sở}
+\label{tab:basic-final-fi}
+\begin{tabular}{cc}
+\toprule
+Itemset & Support \\
+\midrule
+$\{1\}$ & 3 \\
+$\{2\}$ & 4 \\
+$\{3\}$ & 5 \\
+$\{4\}$ & 2 \\
+$\{5\}$ & 2 \\
+$\{1,2\}$ & 2 \\
+$\{1,3\}$ & 3 \\
+$\{2,3\}$ & 4 \\
+$\{2,5\}$ & 2 \\
+$\{3,4\}$ & 2 \\
+$\{3,5\}$ & 2 \\
+$\{1,2,3\}$ & 2 \\
+$\{2,3,5\}$ & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Kiểm tra chéo bằng liệt kê thủ công}
+
+Để kiểm tra chéo kết quả, nhóm liệt kê thủ công support của các itemset có khả năng phổ biến.
+
+Với các item đơn, toàn bộ 5 item đều phổ biến như Bảng~\ref{tab:basic-single-support}.
+
+Với các 2-itemset, support thủ công được trình bày trong Bảng~\ref{tab:basic-crosscheck-pairs}.
+
+\begin{table}[H]
+\centering
+\caption{Kiểm tra chéo support của toàn bộ 2-itemset}
+\label{tab:basic-crosscheck-pairs}
+\begin{tabular}{ccc}
+\toprule
+Itemset & Các giao dịch chứa itemset & Support \\
+\midrule
+$\{1,2\}$ & $T_1, T_4$ & 2 \\
+$\{1,3\}$ & $T_1, T_2, T_4$ & 3 \\
+$\{1,4\}$ & $T_2$ & 1 \\
+$\{1,5\}$ & $T_4$ & 1 \\
+$\{2,3\}$ & $T_1, T_3, T_4, T_5$ & 4 \\
+$\{2,4\}$ & $T_5$ & 1 \\
+$\{2,5\}$ & $T_3, T_4$ & 2 \\
+$\{3,4\}$ & $T_2, T_5$ & 2 \\
+$\{3,5\}$ & $T_3, T_4$ & 2 \\
+$\{4,5\}$ & Không có & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Với các 3-itemset, support thủ công được trình bày trong Bảng~\ref{tab:basic-crosscheck-triples}.
+
+\begin{table}[H]
+\centering
+\caption{Kiểm tra chéo support của toàn bộ 3-itemset}
+\label{tab:basic-crosscheck-triples}
+\begin{tabular}{ccc}
+\toprule
+Itemset & Các giao dịch chứa itemset & Support \\
+\midrule
+$\{1,2,3\}$ & $T_1, T_4$ & 2 \\
+$\{1,2,4\}$ & Không có & 0 \\
+$\{1,2,5\}$ & $T_4$ & 1 \\
+$\{1,3,4\}$ & $T_2$ & 1 \\
+$\{1,3,5\}$ & $T_4$ & 1 \\
+$\{1,4,5\}$ & Không có & 0 \\
+$\{2,3,4\}$ & $T_5$ & 1 \\
+$\{2,3,5\}$ & $T_3, T_4$ & 2 \\
+$\{2,4,5\}$ & Không có & 0 \\
+$\{3,4,5\}$ & Không có & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Với các itemset có kích thước 4 trở lên, không có itemset nào đạt $minsup = 2$. Do đó, kết quả kiểm tra chéo khớp với tập FI sinh ra bởi PrePost trong Bảng~\ref{tab:basic-final-fi}.
+
+\subsection{Ví dụ 2: Tình huống đặc biệt PPC-tree một nhánh}
+
+\subsubsection{Cơ sở dữ liệu giao dịch ban đầu}
+
+Ví dụ thứ hai được thiết kế để tạo ra PPC-tree dạng một nhánh. Đây là tình huống đặc biệt quan trọng vì các giao dịch có mức độ chia sẻ tiền tố rất cao, giúp PPC-tree nén TDB mạnh.
+
+Ngưỡng hỗ trợ tối thiểu vẫn được chọn là:
+
+\begin{equation}
+    minsup = 2.
+    \label{eq:chapter2-special-minsup}
+\end{equation}
+
+TDB của ví dụ đặc biệt được trình bày trong Bảng~\ref{tab:special-tdb}.
+
+\begin{table}[H]
+\centering
+\caption{TDB của ví dụ đặc biệt}
+\label{tab:special-tdb}
+\begin{tabular}{cl}
+\toprule
+TID & Giao dịch \\
+\midrule
+$T_1$ & $\{1,2,3,4\}$ \\
+$T_2$ & $\{1,2,3\}$ \\
+$T_3$ & $\{1,2,3,4\}$ \\
+$T_4$ & $\{1,2,3\}$ \\
+$T_5$ & $\{1,2\}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Bước 1: Tính support và thứ tự toàn cục}
+
+Support của các item đơn được trình bày trong Bảng~\ref{tab:special-single-support}.
+
+\begin{table}[H]
+\centering
+\caption{Support của các item đơn trong ví dụ đặc biệt}
+\label{tab:special-single-support}
+\begin{tabular}{cc}
+\toprule
+Item & Support \\
+\midrule
+1 & 5 \\
+2 & 5 \\
+3 & 4 \\
+4 & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tất cả item đều phổ biến. Thứ tự toàn cục được chọn là:
+
+\begin{equation}
+    1 \succ 2 \succ 3 \succ 4.
+    \label{eq:special-global-order}
+\end{equation}
+
+Sau khi sắp xếp, các giao dịch vẫn giữ dạng như Bảng~\ref{tab:special-sorted-tdb}.
+
+\begin{table}[H]
+\centering
+\caption{TDB sau khi sắp xếp trong ví dụ đặc biệt}
+\label{tab:special-sorted-tdb}
+\begin{tabular}{cl}
+\toprule
+TID & Giao dịch sau sắp xếp \\
+\midrule
+$T_1$ & $\langle 1,2,3,4\rangle$ \\
+$T_2$ & $\langle 1,2,3\rangle$ \\
+$T_3$ & $\langle 1,2,3,4\rangle$ \\
+$T_4$ & $\langle 1,2,3\rangle$ \\
+$T_5$ & $\langle 1,2\rangle$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Bước 2: Xây dựng PPC-tree một nhánh}
+
+Khi chèn các giao dịch vào PPC-tree, tất cả giao dịch đều chia sẻ cùng một tiền tố $1 \rightarrow 2$. Các giao dịch chứa item $3$ tiếp tục đi qua node $3$, và các giao dịch chứa item $4$ tiếp tục đi qua node $4$. Vì vậy, PPC-tree thu được chỉ có một nhánh như Hình~\ref{fig:special-single-path-tree}.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.6\textwidth}
+\ttfamily\small
+Root\\
+\textbar-- 1: count = 5\\
+\textbar\hspace*{1em}\textbar-- 2: count = 5\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 3: count = 4\\
+\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar\hspace*{1em}\textbar-- 4: count = 2
+\end{minipage}%
+}
+\caption{PPC-tree một nhánh trong ví dụ đặc biệt}
+\label{fig:special-single-path-tree}
+\end{figure}
+
+\subsubsection{Bước 3: Gán mã pre và post}
+
+Vì cây chỉ có một nhánh, thứ tự $pre$ tăng dần từ gốc xuống lá, còn thứ tự $post$ tăng dần từ lá lên gần gốc. Kết quả được trình bày trong Bảng~\ref{tab:special-prepost-codes}.
+
+\begin{table}[H]
+\centering
+\caption{Mã $pre$ và $post$ trong PPC-tree một nhánh}
+\label{tab:special-prepost-codes}
+\begin{tabular}{ccccc}
+\toprule
+Ký hiệu node & Item & Count & $pre$ & $post$ \\
+\midrule
+$n_1$ & 1 & 5 & 1 & 4 \\
+$n_2$ & 2 & 5 & 2 & 3 \\
+$n_3$ & 3 & 4 & 3 & 2 \\
+$n_4$ & 4 & 2 & 4 & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Bước 4: Tạo N-list}
+
+Vì mỗi item chỉ xuất hiện trên đúng một node, N-list của mỗi item chỉ có một bộ ba. Kết quả được trình bày trong Bảng~\ref{tab:special-single-nlists}.
+
+\begin{table}[H]
+\centering
+\caption{N-list của các item đơn trong ví dụ đặc biệt}
+\label{tab:special-single-nlists}
+\begin{tabular}{clc}
+\toprule
+Item & N-list & Support \\
+\midrule
+1 & $\{(1,4,5)\}$ & 5 \\
+2 & $\{(2,3,5)\}$ & 5 \\
+3 & $\{(3,2,4)\}$ & 4 \\
+4 & $\{(4,1,2)\}$ & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Bước 5: Khai thác các FI}
+
+Trong PPC-tree một nhánh, mọi item đứng trước trên đường đi đều là tổ tiên của các item đứng sau. Vì vậy, mọi tổ hợp item trên nhánh đều là một itemset có thể xét. Support của itemset chính là count của node sâu nhất trong itemset đó.
+
+Ví dụ, với itemset $\{1,2,3,4\}$, node sâu nhất là node $4$ có $count = 2$, do đó:
+
+\begin{equation}
+    sup(\{1,2,3,4\}) = 2.
+    \label{eq:special-support-1234}
+\end{equation}
+
+Vì $sup(\{1,2,3,4\}) = minsup$, itemset này là FI.
+
+Toàn bộ FI của ví dụ đặc biệt được trình bày trong Bảng~\ref{tab:special-final-fi}.
+
+\begin{table}[H]
+\centering
+\caption{Tập FI cuối cùng của ví dụ đặc biệt}
+\label{tab:special-final-fi}
+\begin{tabular}{cc}
+\toprule
+Itemset & Support \\
+\midrule
+$\{1\}$ & 5 \\
+$\{2\}$ & 5 \\
+$\{3\}$ & 4 \\
+$\{4\}$ & 2 \\
+$\{1,2\}$ & 5 \\
+$\{1,3\}$ & 4 \\
+$\{1,4\}$ & 2 \\
+$\{2,3\}$ & 4 \\
+$\{2,4\}$ & 2 \\
+$\{3,4\}$ & 2 \\
+$\{1,2,3\}$ & 4 \\
+$\{1,2,4\}$ & 2 \\
+$\{1,3,4\}$ & 2 \\
+$\{2,3,4\}$ & 2 \\
+$\{1,2,3,4\}$ & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Phân tích ý nghĩa của trường hợp đặc biệt}
+
+Trường hợp PPC-tree một nhánh là một tình huống đặc biệt quan trọng đối với PrePost. Khi TDB có nhiều giao dịch chia sẻ cùng tiền tố, PPC-tree nén dữ liệu rất tốt vì nhiều giao dịch được biểu diễn bằng cùng một đường đi. Trong ví dụ này, thay vì lưu lại 5 giao dịch riêng biệt, PPC-tree chỉ cần 4 node để biểu diễn toàn bộ TDB.
+
+Ngoài ra, thao tác sinh FI cũng trở nên trực quan hơn. Vì tất cả item nằm trên cùng một nhánh, quan hệ tổ tiên -- hậu duệ giữa các node luôn rõ ràng. Với mọi itemset nằm trên nhánh, support được xác định bởi count của node sâu nhất. Điều này giúp giảm đáng kể chi phí kiểm tra quan hệ giữa các node trong N-list.
+
+Tuy nhiên, trường hợp này cũng cho thấy một đặc điểm quan trọng của FIM: khi dữ liệu dày đặc hoặc có nhiều item cùng xuất hiện, số lượng FI có thể tăng nhanh. Trong ví dụ này chỉ có 4 item nhưng đã sinh ra toàn bộ $2^4 - 1 = 15$ FI. Điều này giải thích vì sao khi $minsup$ thấp hoặc dữ liệu dày đặc, thời gian chạy của các thuật toán FIM có thể tăng mạnh do kích thước đầu ra lớn.
+
+\subsection{Kết luận chương}
+
+Chương này đã trình bày hai ví dụ minh họa tay cho thuật toán PrePost. Ví dụ cơ sở cho thấy đầy đủ quá trình xử lý từ TDB ban đầu đến PPC-tree, N-list và tập FI cuối cùng. Kết quả cũng được kiểm tra chéo bằng cách liệt kê thủ công support của các itemset. Ví dụ thứ hai minh họa trường hợp PPC-tree một nhánh, qua đó làm rõ khả năng nén dữ liệu của PPC-tree và cách PrePost xử lý khi các giao dịch chia sẻ tiền tố cao.
