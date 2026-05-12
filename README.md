@@ -9,13 +9,13 @@
 
 ## 2. Thành viên nhóm
 
-| MSSV     | Họ và tên |
-|----------|---|---|
+| MSSV | Họ và tên |
+|---|---|
 | 22120187 | Trần Thiên Lộc |
 | 23120095 | Lưu Đức Toàn |
 | 23120245 | Nguyễn Quang Duy |
 | 23120258 | Lưu Trọng Hiếu |
-| 23120260 | Văn Đình Hiếu | 
+| 23120260 | Văn Đình Hiếu |
 
 ## 3. Giới thiệu
 
@@ -28,21 +28,22 @@ Mục tiêu chính của đồ án:
 - Cài đặt thuật toán PrePost từ đầu.
 - Hỗ trợ đọc dữ liệu theo định dạng SPMF.
 - Xuất tất cả frequent itemsets cùng support tương ứng.
-- Kiểm tra độ đúng bằng cách so sánh với SPMF.
+- Kiểm tra độ đúng bằng cách so sánh với expected output và SPMF.
 - Đánh giá thời gian chạy, bộ nhớ và khả năng mở rộng.
 - Ứng dụng kết quả frequent itemset vào sinh luật kết hợp.
 
 ## 4. Cấu trúc thư mục
 
 ```text
-Group_ID/
+PrePost/
 │
 ├── README.md
 ├── Project.toml
 ├── Manifest.toml
 │
 ├── src/
-│   ├── PrePost.jl
+│   ├── PrePostFIM.jl
+│   ├── cli.jl
 │   │
 │   ├── algorithm/
 │   │   ├── prepost.jl
@@ -54,13 +55,11 @@ Group_ID/
 │   │   ├── nlist.jl
 │   │   └── transaction_db.jl
 │   │
-│   ├── utils/
-│   │   ├── io_spmf.jl
-│   │   ├── preprocessing.jl
-│   │   ├── metrics.jl
-│   │   └── timer.jl
-│   │
-│   └── cli.jl
+│   └── utils/
+│       ├── io_spmf.jl
+│       ├── preprocessing.jl
+│       ├── metrics.jl
+│       └── timer.jl
 │
 ├── tests/
 │   ├── runtests.jl
@@ -68,7 +67,8 @@ Group_ID/
 │   ├── test_ppc_tree.jl
 │   ├── test_nlist.jl
 │   ├── test_io.jl
-│   └── test_benchmark.jl
+│   ├── test_benchmark.jl
+│   └── test_optimization.jl
 │
 ├── data/
 │   ├── toy/
@@ -82,7 +82,6 @@ Group_ID/
 │   │   ├── chess.txt
 │   │   ├── mushroom.txt
 │   │   ├── retail.txt
-│   │   ├── accidents.txt
 │   │   └── T10I4D100K.txt
 │   │
 │   ├── subsets/
@@ -96,104 +95,176 @@ Group_ID/
 │       ├── groceries.txt
 │       └── groceries_metadata.md
 │
-├── experiments/
-│   ├── run_correctness.jl
-│   ├── run_runtime.jl
-│   ├── run_memory.jl
-│   ├── run_scalability.jl
-│   ├── run_transaction_length.jl
-│   └── generate_plots.jl
+├── cmd/                 # PowerShell scripts for Windows
+│   ├── setup_datasets.ps1
+│   ├── setup_julia_env.ps1
+│   ├── create_retail_subsets.ps1
+│   ├── check_project.ps1
+│   ├── run_tests.ps1
+│   ├── check_algorithms.ps1
+│   ├── run_optimization_check.ps1
+│   ├── run_benchmarks.ps1
+│   └── clean_outputs.ps1
 │
-├── results/
-│   ├── correctness/
-│   │   ├── correctness_summary.csv
-│   │   └── diff_logs/
-│   │
-│   ├── runtime/
-│   │   ├── runtime_prepost.csv
-│   │   ├── runtime_spmf.csv
-│   │   └── runtime_comparison.csv
-│   │
-│   ├── memory/
-│   │   ├── memory_basic.csv
-│   │   └── memory_optimized.csv
-│   │
-│   ├── scalability/
-│   │   └── scalability_retail.csv
-│   │
-│   ├── application/
-│   │   ├── frequent_itemsets.csv
-│   │   ├── association_rules.csv
-│   │   └── top10_rules_by_lift.csv
-│   │
-│   └── figures/
-│       ├── runtime_vs_minsup.png
-│       ├── itemsets_vs_minsup.png
-│       ├── memory_usage.png
-│       ├── scalability.png
-│       └── transaction_length_effect.png
+├── scripts/             # Bash scripts for Linux/macOS and helper Julia scripts
+│   ├── setup_datasets.sh
+│   ├── setup_julia_env.sh
+│   ├── create_retail_subsets.sh
+│   ├── check_project.sh
+│   ├── run_tests.sh
+│   ├── check_algorithms.sh
+│   ├── run_optimization_check.sh
+│   ├── run_benchmarks.sh
+│   ├── clean_outputs.sh
+│   └── optimization_check.jl
+│
+├── outputs/             # Generated outputs, ignored by Git
+├── results/             # Generated experiment summaries, ignored by Git
+├── logs/                # Generated logs, ignored by Git
 │
 ├── notebooks/
 │   ├── demo.ipynb
-│   ├── manual_example.ipynb
-│   └── experiment_analysis.ipynb
+│   └── manual_example.ipynb
 │
-├── docs/
-│   ├── Report.pdf
-│   ├── Report.tex
-│   ├── references.bib
-│   │
-│   ├── chapters/
-│   │   ├── chapter1_theory.tex
-│   │   ├── chapter2_manual_examples.tex
-│   │   ├── chapter3_implementation.tex
-│   │   ├── chapter4_experiments.tex
-│   │   └── chapter5_application.tex
-│   │
-│   └── figures/
-│
-├── scripts/    # for Linux/MacOS users
-├── cmd/        # for Windows users
-│
-└── spmf/
-    ├── spmf.jar
-    ├── run_spmf_reference.sh
-    └── reference_outputs/
-        ├── chess/
-        ├── mushroom/
-        ├── retail/
-        ├── accidents/
-        └── T10I4D100K/
+└── docs/
+    ├── Report.tex
+    ├── references.bib
+    ├── chapters/
+    │   ├── chapter1_theory.tex
+    │   ├── chapter2_manual_examples.tex
+    │   ├── chapter3_implementation.tex
+    │   ├── chapter4_experiments.tex
+    │   └── chapter5_application.tex
+    └── figures/
 ```
 
-## 5. Cài đặt môi trường
+## 5. Cài đặt và chạy project
 
 ### 5.1. Yêu cầu hệ thống
 
 - Julia >= 1.9
-- Java >= 8, dùng để chạy SPMF tham chiếu
 - Git
-- Hệ điều hành: Windows, Linux hoặc macOS
+- PowerShell 7 trên Windows, hoặc Bash trên Linux/macOS
+- Java >= 8 nếu cần chạy SPMF tham chiếu
 
-### 5.2. Cài đặt package Julia
-
-Từ thư mục gốc của project, chạy:
-
-```bash
-julia --project=.
-```
-
-Trong Julia REPL, chạy:
-
-```julia
-using Pkg
-Pkg.instantiate()
-```
-
-Hoặc chạy trực tiếp bằng lệnh:
+Kiểm tra Julia:
 
 ```bash
-julia --project=. -e "using Pkg; Pkg.instantiate()"
+julia --version
+```
+
+### 5.2. Setup trên Windows
+
+Từ thư mục gốc project, chạy lần lượt:
+
+```powershell
+.\cmd\setup_datasets.ps1
+```
+
+```powershell
+.\cmd\setup_julia_env.ps1
+```
+
+Sau khi dữ liệu đã được setup, tạo các subset của Retail dùng cho thực nghiệm scalability:
+
+```powershell
+.\cmd\create_retail_subsets.ps1
+```
+
+Kiểm tra lại cấu trúc project, dữ liệu, source code và các file cần thiết:
+
+```powershell
+.\cmd\check_project.ps1
+```
+
+Sau đó chạy kiểm thử:
+
+```powershell
+.\cmd\run_tests.ps1
+```
+
+Kiểm tra thuật toán trên hai toy datasets:
+
+```powershell
+.\cmd\check_algorithms.ps1
+```
+
+Kiểm tra so sánh phiên bản cơ bản và tối ưu cho Level 3:
+
+```powershell
+.\cmd\run_optimization_check.ps1
+```
+
+Nếu muốn chạy benchmark cho Chương 4:
+
+```powershell
+.\cmd\run_benchmarks.ps1
+```
+
+Dọn các file output sinh ra:
+
+```powershell
+.\cmd\clean_outputs.ps1
+```
+
+### 5.3. Setup trên Linux/macOS
+
+Cấp quyền chạy cho các script nếu cần:
+
+```bash
+chmod +x scripts/*.sh
+```
+
+Chạy lần lượt:
+
+```bash
+bash scripts/setup_datasets.sh
+```
+
+```bash
+bash scripts/setup_julia_env.sh
+```
+
+Sau khi dữ liệu đã được setup, tạo các subset của Retail:
+
+```bash
+bash scripts/create_retail_subsets.sh
+```
+
+Kiểm tra lại project:
+
+```bash
+bash scripts/check_project.sh
+```
+
+Chạy kiểm thử:
+
+```bash
+bash scripts/run_tests.sh
+```
+
+Kiểm tra thuật toán trên hai toy datasets:
+
+```bash
+bash scripts/check_algorithms.sh
+```
+
+Kiểm tra so sánh phiên bản cơ bản và tối ưu:
+
+```bash
+bash scripts/run_optimization_check.sh
+```
+
+Nếu muốn chạy benchmark cho Chương 4:
+
+```bash
+bash scripts/run_benchmarks.sh
+```
+
+Dọn các file output sinh ra:
+
+```bash
+bash scripts/clean_outputs.sh
 ```
 
 ## 6. Định dạng dữ liệu đầu vào
@@ -213,71 +284,43 @@ Ví dụ:
 Quy ước:
 
 - Mỗi dòng là một transaction.
-- Item là số nguyên dương.
+- Item là số nguyên.
 - Các item trong cùng transaction cách nhau bằng khoảng trắng.
-- Một transaction không chứa item trùng lặp.
 - Các dòng rỗng sẽ được bỏ qua.
+- Nếu một dòng có phần sau ký tự `#`, phần đó được xem như chú thích và được bỏ qua.
 
-## 7. Cách chạy thuật toán PrePost
+## 7. Cách chạy thuật toán PrePost bằng CLI
 
-### 7.1. Chạy trên dữ liệu toy
-
-```bash
-julia --project=. src/cli.jl \
-  --input data/toy/example_basic.txt \
-  --minsup 2 \
-  --output results/toy/example_basic_output.txt
-```
-
-### 7.2. Chạy trên benchmark
-
-Ví dụ với tập dữ liệu Chess:
+Chạy trên dữ liệu toy:
 
 ```bash
-julia --project=. src/cli.jl \
-  --input data/benchmark/chess.txt \
-  --minsup 2000 \
-  --output results/chess_output.txt
+julia --project=. src/cli.jl --input data/toy/example_basic.txt --minsup 2 --output outputs/toy/output_basic.out
 ```
 
-Ví dụ với tập dữ liệu Mushroom:
+Chạy trên dữ liệu benchmark:
 
 ```bash
-julia --project=. src/cli.jl \
-  --input data/benchmark/mushroom.txt \
-  --minsup 1000 \
-  --output results/mushroom_output.txt
+julia --project=. src/cli.jl --input data/benchmark/chess.txt --minsup 2000 --output outputs/benchmark/our/chess_minsup2000.out
 ```
 
-### 7.3. Tham số dòng lệnh
+### Tham số dòng lệnh
 
 | Tham số | Ý nghĩa | Bắt buộc |
 |---|---|---|
 | `--input` | Đường dẫn file dữ liệu đầu vào | Có |
 | `--minsup` | Ngưỡng support tuyệt đối | Có |
 | `--output` | Đường dẫn file kết quả | Có |
-| `--optimized` | Chạy phiên bản tối ưu hóa nếu có | Không |
-
-Ví dụ chạy phiên bản tối ưu:
-
-```bash
-julia --project=. src/cli.jl \
-  --input data/benchmark/retail.txt \
-  --minsup 500 \
-  --output results/retail_output.txt \
-  --optimized
-```
 
 ## 8. Định dạng kết quả đầu ra
 
 File output lưu frequent itemsets theo định dạng:
 
 ```text
-1 #SUP: 4
+1 #SUP: 3
 2 #SUP: 4
 3 #SUP: 5
+1 2 #SUP: 2
 1 3 #SUP: 3
-2 3 #SUP: 4
 1 2 3 #SUP: 2
 ```
 
@@ -285,137 +328,129 @@ Trong đó:
 
 - Phần trước `#SUP:` là itemset.
 - Phần sau `#SUP:` là support tuyệt đối của itemset.
+- Các item trong mỗi itemset được sắp xếp tăng dần.
+- Kết quả được chuẩn hóa để dễ so sánh với expected output.
 
-## 9. Chạy kiểm thử
+## 9. Kiểm thử
 
 Dự án có bộ unit test tự động trong thư mục `tests/`.
 
-Chạy toàn bộ test:
+Chạy trên Windows:
+
+```powershell
+.\cmd\run_tests.ps1
+```
+
+Chạy trực tiếp bằng Julia:
 
 ```bash
 julia --project=. tests/runtests.jl
 ```
 
-Hoặc chạy bằng script:
+Chạy trên Linux/macOS:
 
 ```bash
-bash scripts/run_all_tests.sh
+bash scripts/run_tests.sh
 ```
 
 Các nhóm test chính:
 
 | File test | Nội dung |
 |---|---|
-| `test_ppc_tree.jl` | Kiểm tra xây dựng PPC-tree |
-| `test_nlist.jl` | Kiểm tra tạo và kết hợp N-list |
+| `test_ppc_tree.jl` | Kiểm tra xây dựng PPC-tree và mã `pre`, `post` |
+| `test_nlist.jl` | Kiểm tra tạo N-list, support và phép join N-list |
 | `test_io.jl` | Kiểm tra đọc/ghi định dạng SPMF |
-| `test_correctness.jl` | So sánh output với kết quả mong đợi trên toy dataset |
-| `test_benchmark.jl` | So sánh output với SPMF trên benchmark |
+| `test_correctness.jl` | Kiểm tra độ đúng trên toy datasets và các trường hợp biên |
+| `test_benchmark.jl` | Kiểm tra sự tồn tại của dữ liệu benchmark và benchmark helper |
+| `test_optimization.jl` | Kiểm tra hai phiên bản basic và optimized cho cùng kết quả |
 
-Sau khi chạy test, kết quả lần chạy cuối cần được ghi lại trong phần dưới đây.
-
-### 9.1. Output kiểm thử lần cuối
-
-```text
-[Điền output của lần chạy tests/runtests.jl vào đây trước khi nộp bài]
-```
-
-## 10. So sánh với SPMF
-
-SPMF chỉ được sử dụng làm chương trình tham chiếu để kiểm tra độ đúng. Nhóm không sử dụng hoặc sao chép mã nguồn từ SPMF.
-
-### 10.1. Chạy SPMF tham chiếu
-
-Ví dụ:
-
-```bash
-java -jar spmf/spmf.jar run PrePost \
-  data/benchmark/chess.txt \
-  spmf/reference_outputs/chess/output_minsup2000.txt \
-  2000
-```
-
-Lưu ý: cú pháp chạy SPMF có thể thay đổi tùy phiên bản SPMF. Nếu lệnh trên không phù hợp, xem hướng dẫn chính thức của file `spmf.jar` đang sử dụng.
-
-### 10.2. Chạy kiểm tra correctness
-
-```bash
-julia --project=. experiments/run_correctness.jl
-```
-
-Kết quả được lưu tại:
+### Output kiểm thử gần nhất
 
 ```text
-results/correctness/correctness_summary.csv
+Running Julia tests...
+Precompiling PrePostFIM finished.
+  1 dependency successfully precompiled in 1 seconds
+Starting PrePostFIM test suite...
+Test Summary: | Pass  Total  Time
+PrePostFIM    |   81     81  5.7s
+Finished PrePostFIM test suite.
 ```
 
-Các chỉ số correctness:
+## 10. Kiểm tra thuật toán trên toy datasets
 
-- Số lượng frequent itemsets của nhóm.
-- Số lượng frequent itemsets của SPMF.
-- Tỉ lệ itemset khớp hoàn toàn.
-- Số itemset thiếu.
-- Số itemset dư.
-- Số itemset sai support.
+Chạy trên Windows:
 
-## 11. Chạy thực nghiệm
+```powershell
+.\cmd\check_algorithms.ps1
+```
 
-### 11.1. Thời gian chạy theo minsup
+Chạy trên Linux/macOS:
 
 ```bash
-julia --project=. experiments/run_runtime.jl
+bash scripts/check_algorithms.sh
 ```
 
-Kết quả:
+Kết quả gần nhất:
 
 ```text
-results/runtime/runtime_prepost.csv
-results/runtime/runtime_spmf.csv
-results/runtime/runtime_comparison.csv
+Checking PrePost Algorithm
+
+[1/5] Checking required files...
+Required files found.
+
+[2/5] Running basic toy dataset...
+Frequent itemsets: 13
+
+[3/5] Running special single-path dataset...
+Frequent itemsets: 15
+
+[5/5] Comparing results...
+[PASSED] Basic dataset output matches expected.
+[PASSED] Special dataset output matches expected.
+
+Algorithm check PASSED
 ```
 
-### 11.2. Đo bộ nhớ
+## 11. Level 3 - So sánh phiên bản cơ bản và tối ưu
+
+Dự án cung cấp hai phiên bản:
+
+- `prepost_basic`: phiên bản cơ bản.
+- `prepost_optimized`: phiên bản tối ưu.
+- `prepost`: mặc định gọi phiên bản tối ưu.
+
+Tối ưu hiện tại:
+
+- Phiên bản tối ưu áp dụng tỉa nhánh sớm trong quá trình khai thác N-list.
+- Sau khi join N-list, nếu support của itemset mới nhỏ hơn `minsup`, itemset này bị loại bỏ ngay và không được mở rộng tiếp.
+- Kỹ thuật này dựa trên tính chất Apriori/downward closure.
+
+Chạy kiểm tra tối ưu trên Windows:
+
+```powershell
+.\cmd\run_optimization_check.ps1
+```
+
+Chạy trên Linux/macOS:
 
 ```bash
-julia --project=. experiments/run_memory.jl
+bash scripts/run_optimization_check.sh
 ```
 
-Kết quả:
+Kết quả được ghi vào:
 
 ```text
-results/memory/memory_basic.csv
-results/memory/memory_optimized.csv
+results/optimization_summary.csv
 ```
 
-### 11.3. Thực nghiệm scalability
-
-```bash
-julia --project=. experiments/run_scalability.jl
-```
-
-Kết quả:
+Kết quả gần nhất:
 
 ```text
-results/scalability/scalability_retail.csv
+toy_basic minsup=2 itemsets=13 match=true basic=0.531s optimized=0.001s speedup=531.039x
+toy_special_single_path minsup=2 itemsets=15 match=true basic=0.151s optimized=0.000s speedup=Inf
 ```
 
-### 11.4. Ảnh hưởng của độ dài giao dịch trung bình
-
-```bash
-julia --project=. experiments/run_transaction_length.jl
-```
-
-### 11.5. Sinh biểu đồ
-
-```bash
-julia --project=. experiments/generate_plots.jl
-```
-
-Các biểu đồ được lưu tại:
-
-```text
-results/figures/
-```
+Lưu ý: Hai toy datasets có kích thước nhỏ nên thời gian chạy của phiên bản tối ưu có thể gần bằng 0 giây. Kết quả này chủ yếu dùng để kiểm tra rằng hai phiên bản sinh cùng itemset và support. Phần đánh giá hiệu năng đầy đủ được thực hiện ở Chương 4.
 
 ## 12. Benchmark datasets
 
@@ -426,21 +461,61 @@ Các tập dữ liệu dùng trong thực nghiệm:
 | Chess | 3,196 | 75 | 37.0 | Dày đặc, itemset dài |
 | Mushroom | 8,124 | 119 | 23.0 | Dày đặc, nhiều item |
 | Retail | 88,162 | 16,470 | 10.3 | Thưa, dữ liệu thực tế |
-| Accidents | 340,183 | 468 | 33.8 | Rất lớn, dày đặc |
 | T10I4D100K | 100,000 | 870 | 10.1 | Tổng hợp, thưa |
 
-Nếu file benchmark vượt quá giới hạn dung lượng nộp bài, nhóm sẽ tải dữ liệu lên Google Drive và cung cấp link tại đây:
+Các file hiện được đặt trong:
 
 ```text
-[Điền link Google Drive chứa benchmark datasets nếu cần]
+data/benchmark/
 ```
 
-## 13. Ứng dụng thực tế
+Các subset của Retail dùng cho thực nghiệm scalability:
+
+```text
+data/subsets/retail_10.txt
+data/subsets/retail_25.txt
+data/subsets/retail_50.txt
+data/subsets/retail_75.txt
+data/subsets/retail_100.txt
+```
+
+## 13. Chạy benchmark cho Chương 4
+
+Chạy trên Windows:
+
+```powershell
+.\cmd\run_benchmarks.ps1
+```
+
+Chạy trên Linux/macOS:
+
+```bash
+bash scripts/run_benchmarks.sh
+```
+
+Các kết quả sinh ra được lưu trong:
+
+```text
+outputs/
+results/
+logs/
+```
+
+Các thư mục này là output sinh tự động và thường được ignore bởi Git.
+
+## 14. Ứng dụng thực tế
 
 Nhóm chọn ứng dụng:
 
 ```text
 Market Basket Analysis
+```
+
+Dữ liệu ứng dụng:
+
+```text
+data/application/groceries.txt
+data/application/groceries_metadata.md
 ```
 
 Quy trình:
@@ -461,66 +536,63 @@ confidence(X => Y) = support(X ∪ Y) / support(X)
 lift(X => Y) = confidence(X => Y) / support(Y)
 ```
 
-Chạy ứng dụng:
+## 15. So sánh với SPMF
 
-```bash
-julia --project=. experiments/run_application.jl
-```
+SPMF chỉ được sử dụng làm chương trình tham chiếu để kiểm tra độ đúng. Nhóm không sử dụng hoặc sao chép mã nguồn từ SPMF.
 
-Kết quả:
+Quy trình so sánh:
 
-```text
-results/application/frequent_itemsets.csv
-results/application/association_rules.csv
-results/application/top10_rules_by_lift.csv
-```
+1. Chạy thuật toán của nhóm trên cùng input và cùng `minsup`.
+2. Chạy SPMF trên cùng input và cùng `minsup`.
+3. Chuẩn hóa output.
+4. So sánh:
+   - số lượng frequent itemsets;
+   - support của từng itemset;
+   - tỉ lệ itemset khớp hoàn toàn.
 
-## 14. Tối ưu hóa
-
-Phiên bản cơ bản:
-
-- Đọc database.
-- Lọc item không phổ biến.
-- Xây dựng PPC-tree.
-- Gán pre-order và post-order.
-- Tạo N-list.
-- Khai thác frequent itemsets từ N-list.
-
-Phiên bản tối ưu dự kiến:
-
-- Sử dụng cấu trúc dữ liệu gọn cho node của PPC-tree.
-- Sắp xếp item theo support giảm dần để tăng khả năng nén cây.
-- Tái sử dụng N-list trong quá trình khai thác.
-- Giảm cấp phát bộ nhớ trong vòng lặp nóng.
-- Dùng `@inbounds` tại các vị trí truy cập mảng an toàn.
-- Tránh global variables không có kiểu cụ thể.
-
-Kết quả so sánh bản cơ bản và bản tối ưu được lưu tại:
-
-```text
-results/memory/
-results/runtime/
-```
-
-## 15. Reproducibility
+## 16. Reproducibility
 
 Để đảm bảo kết quả có thể tái sản xuất:
 
-- Cố định seed ngẫu nhiên trong các thí nghiệm tạo dữ liệu tổng hợp.
+- Chạy setup bằng script trong `cmd/` hoặc `scripts/`.
 - Ghi rõ phiên bản Julia.
-- Lưu toàn bộ tham số chạy thực nghiệm.
-- Lưu output của lần chạy test cuối cùng trong README.
+- Dữ liệu toy và expected output được lưu trong repository.
+- Các file output sinh ra nằm trong `outputs/`, `results/`, `logs/`.
 - Không chỉnh sửa thủ công các file kết quả thực nghiệm.
 
-Kiểm tra phiên bản Julia:
+Trước khi nộp bài, chạy lại:
 
-```bash
-julia --version
+Windows:
+
+```powershell
+.\cmd\clean_outputs.ps1
+.\cmd\setup_datasets.ps1
+.\cmd\setup_julia_env.ps1
+.\cmd\create_retail_subsets.ps1
+.\cmd\check_project.ps1
+.\cmd\run_tests.ps1
+.\cmd\check_algorithms.ps1
+.\cmd\run_optimization_check.ps1
 ```
 
-## 16. Tài liệu tham khảo
+Linux/macOS:
+
+```bash
+bash scripts/clean_outputs.sh
+bash scripts/setup_datasets.sh
+bash scripts/setup_julia_env.sh
+bash scripts/create_retail_subsets.sh
+bash scripts/check_project.sh
+bash scripts/run_tests.sh
+bash scripts/check_algorithms.sh
+bash scripts/run_optimization_check.sh
+```
+
+## 17. Tài liệu tham khảo
 
 1. Deng, Z. H., Wang, Z., & Jiang, J. J. PrePost: A new method for mining frequent itemsets based on N-lists.
-2. Tài liệu SPMF - Frequent Itemset Mining Algorithms.
-3. Tài liệu FIMI Repository.
-4. Giáo trình Khai thác dữ liệu và ứng dụng - CSC14004.
+2. Deng, Z. H., & Lv, S. PrePost+: An efficient N-lists-based algorithm for mining frequent itemsets via children-parent equivalence pruning.
+3. Agrawal, R., & Srikant, R. Fast Algorithms for Mining Association Rules.
+4. Han, J., Pei, J., & Yin, Y. Mining Frequent Patterns without Candidate Generation.
+5. SPMF Open-Source Data Mining Library.
+6. FIMI Repository.

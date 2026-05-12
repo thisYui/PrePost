@@ -1,0 +1,5 @@
+dataset,minsup,version,itemsets,time_seconds,match
+toy_basic,2,basic,13,0.531,true
+toy_basic,2,optimized,13,0.001,true
+toy_special_single_path,2,basic,15,0.151,true
+toy_special_single_path,2,optimized,15,0.0,true
