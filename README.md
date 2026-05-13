@@ -155,12 +155,6 @@ Từ thư mục gốc project, chạy lần lượt:
 .\cmd\setup_julia_env.ps1
 ```
 
-Sau khi dữ liệu đã được setup, tạo các subset của Retail dùng cho thực nghiệm scalability:
-
-```powershell
-.\cmd\create_retail_subsets.ps1
-```
-
 Kiểm tra lại cấu trúc project, dữ liệu, source code và các file cần thiết:
 
 ```powershell
@@ -219,12 +213,6 @@ bash scripts/setup_datasets.sh
 
 ```bash
 bash scripts/setup_julia_env.sh
-```
-
-Sau khi dữ liệu đã được setup, tạo các subset của Retail:
-
-```bash
-bash scripts/create_retail_subsets.sh
 ```
 
 Kiểm tra lại project:
