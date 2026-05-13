@@ -1,0 +1,281 @@
+\section{Thực nghiệm và đánh giá}
+\label{sec:experiments}
+
+Chương này trình bày quy trình thực nghiệm và đánh giá thuật toán PrePost đã cài đặt ở Chương 3. Mục tiêu của chương là kiểm tra tính đúng đắn của cài đặt, đánh giá thời gian chạy, số lượng frequent itemset sinh ra, mức sử dụng bộ nhớ, khả năng mở rộng khi tăng kích thước cơ sở dữ liệu và ảnh hưởng của độ dài giao dịch trung bình.
+
+Các kết quả được tổng hợp từ các file CSV trong thư mục \texttt{outputs/csv/} và các biểu đồ trong thư mục \texttt{outputs/figures/}. Khi cần so sánh với thuật toán chuẩn, nhóm sử dụng thuật toán \texttt{PrePost} trong thư viện SPMF. Đối với SPMF, ngưỡng \texttt{minsup} tuyệt đối được chuyển sang dạng phần trăm theo số lượng giao dịch để đảm bảo hai phía sử dụng cùng một ngưỡng hỗ trợ.
+
+% Lệnh chèn hình có kiểm tra file tồn tại. Nếu chưa copy hình vào figures/, LaTeX vẫn biên dịch được.
+\providecommand{\expfigure}[3]{%
+\begin{figure}[H]
+\centering
+\IfFileExists{#1}{\includegraphics[width=0.88\textwidth]{#1}}{\fbox{\begin{minipage}{0.82\textwidth}\centering\vspace{0.8cm}Thiếu hình: \texttt{#1}\\Vui lòng copy hình từ notebook/outputs vào thư mục \texttt{figures/}.\vspace{0.8cm}\end{minipage}}}
+\caption{#2}
+\label{#3}
+\end{figure}
+}
+
+\subsection{Môi trường và tập dữ liệu thực nghiệm}
+\label{subsec:experiment-datasets}
+
+Nhóm thực nghiệm trên bốn tập dữ liệu benchmark phổ biến trong cộng đồng khai thác frequent itemset, gồm \texttt{chess}, \texttt{mushroom}, \texttt{retail} và \texttt{T10I4D100K}. Các tập dữ liệu này bao phủ cả trường hợp dữ liệu dày đặc, dữ liệu thưa và dữ liệu tổng hợp. Thông tin tổng quan được trình bày trong Bảng~\ref{tab:benchmark-datasets}.
+
+\begin{table}[H]
+\centering
+\caption{Các tập dữ liệu benchmark sử dụng trong thực nghiệm}
+\label{tab:benchmark-datasets}
+\begin{tabular}{lrrrl}
+\toprule
+Tập dữ liệu & Số giao dịch & Số item & Độ dài TB & Đặc điểm \\
+\midrule
+\texttt{chess} & 3,196 & 75 & 37.0 & Dày đặc, itemset dài \\
+\texttt{mushroom} & 8,124 & 119 & 23.0 & Dày đặc, nhiều item \\
+\texttt{retail} & 88,162 & 16,470 & 10.3 & Thưa, dữ liệu thực tế \\
+\texttt{T10I4D100K} & 100,000 & 870 & 10.1 & Tổng hợp, thưa \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Mỗi tập dữ liệu được chạy với nhiều mức \texttt{minsup} khác nhau. Bảng~\ref{tab:minsup-settings} liệt kê các mức \texttt{minsup} được dùng trong thí nghiệm thời gian chạy và số lượng frequent itemset. Các mức này được chọn theo thứ tự giảm dần để quan sát sự thay đổi của runtime và output size khi điều kiện phổ biến được nới lỏng.
+
+\begin{table}[H]
+\centering
+\caption{Các mức \texttt{minsup} sử dụng cho từng tập dữ liệu}
+\label{tab:minsup-settings}
+\begin{tabular}{lp{0.72\textwidth}}
+\toprule
+Tập dữ liệu & Các mức \texttt{minsup} \\
+\midrule
+\texttt{chess} & 2558, 2397, 2237, 2077, 1918, 1758 \\
+\texttt{mushroom} & 4062, 3656, 3249, 2843, 2437, 2031 \\
+\texttt{retail} & 1763, 1322, 882, 661, 441, 220 \\
+\texttt{T10I4D100K} & 2000, 1500, 1000, 750, 500, 250 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Quy trình thực nghiệm được tự động hóa bằng script \texttt{run\_all\_experiments.ps1}. Script này chạy lần lượt các nhóm thí nghiệm \texttt{correctness}, \texttt{runtime\_minsup}, \texttt{output\_size}, \texttt{memory\_usage}, \texttt{scalability}, \texttt{transaction\_length} và \texttt{plot\_results}. Khi bật tùy chọn \texttt{-Spmf}, script đồng thời chạy SPMF để đối chiếu kết quả.
+
+\subsection{Kiểm tra tính đúng đắn}
+\label{subsec:experiment-correctness}
+
+Mục tiêu của thí nghiệm correctness là kiểm tra xem cài đặt của nhóm có sinh đúng tập frequent itemset và support tương ứng hay không. Với mỗi tập dữ liệu, nhóm chọn một mức \texttt{minsup} đại diện, chạy cài đặt của nhóm và chạy SPMF với cùng ngưỡng hỗ trợ. Hai file output được chuẩn hóa về dạng ánh xạ từ itemset sang support rồi so sánh theo ba tiêu chí:
+
+\begin{itemize}
+    \item số lượng frequent itemset của cài đặt nhóm và của SPMF;
+    \item số lượng itemset xuất hiện ở cả hai output;
+    \item số lượng itemset có support khác nhau giữa hai output.
+\end{itemize}
+
+Kết quả correctness được trình bày trong Bảng~\ref{tab:correctness-results}. Tỉ lệ khớp được tính theo công thức:
+
+\begin{equation}
+    MatchRatio = \frac{\text{số itemset khớp với SPMF}}{\text{số itemset do SPMF sinh ra}} \times 100\%.
+    \label{eq:match-ratio}
+\end{equation}
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm tra correctness so với SPMF}
+\label{tab:correctness-results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Tập dữ liệu & \texttt{minsup} & Nhóm & SPMF & Khớp & Thiếu ở nhóm & Sai support & Tỉ lệ khớp \\
+\midrule
+\texttt{chess} & 2077 & 111,778 & 111,778 & 111,778 & 0 & 0 & 100\% \\
+\texttt{mushroom} & 2437 & 2,735 & 2,735 & 2,735 & 0 & 0 & 100\% \\
+\texttt{retail} & 661 & 277 & 277 & 277 & 0 & 0 & 100\% \\
+\texttt{T10I4D100K} & 750 & 561 & 561 & 561 & 0 & 0 & 100\% \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Kết quả cho thấy cài đặt của nhóm khớp hoàn toàn với SPMF trên cả bốn tập dữ liệu được kiểm thử: số lượng itemset bằng nhau, không có itemset bị thiếu, không có itemset thừa và không có sai lệch support. Điều này xác nhận rằng các bước chính của thuật toán, gồm tiền xử lý theo \texttt{minsup}, xây dựng PPC-tree, gán mã \texttt{pre}/\texttt{post}, tạo N-list và khai thác đệ quy, đã được cài đặt đúng.
+
+Về mặt lý thuyết, việc khớp support là đặc biệt quan trọng. Trong PrePost, support của một itemset được tính từ N-list thay vì quét lại cơ sở dữ liệu. Nếu điều kiện tổ tiên--hậu duệ dựa trên mã \texttt{pre}/\texttt{post} hoặc phép giao N-list bị sai, support sẽ lệch so với SPMF. Kết quả ở Bảng~\ref{tab:correctness-results} cho thấy biểu diễn N-list và thao tác giao của nhóm là nhất quán với công cụ tham chiếu.
+
+\subsection{Thời gian chạy theo \texttt{minsup}}
+\label{subsec:experiment-runtime}
+
+Thí nghiệm thời gian chạy đánh giá runtime khi giảm dần \texttt{minsup}. Với mỗi tập dữ liệu, nhóm chạy ít nhất sáu mức \texttt{minsup} khác nhau và so sánh đường cong runtime của cài đặt nhóm với SPMF. Các biểu đồ runtime được trình bày trong Hình~\ref{fig:runtime-chess} đến Hình~\ref{fig:runtime-t10}.
+
+\expfigure{figures/runtime_chess.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{chess}}{fig:runtime-chess}
+\expfigure{figures/runtime_mushroom.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{mushroom}}{fig:runtime-mushroom}
+\expfigure{figures/runtime_retail.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{retail}}{fig:runtime-retail}
+\expfigure{figures/runtime_T10I4D100K.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{T10I4D100K}}{fig:runtime-t10}
+
+Kết quả cho thấy khi \texttt{minsup} giảm, runtime thường có xu hướng tăng. Nguyên nhân xuất phát từ tính chất anti-monotone của support đã trình bày ở Chương 1: khi ngưỡng \texttt{minsup} thấp hơn, nhiều itemset hơn thỏa điều kiện phổ biến, làm số lượng N-list trung gian và số nhánh tìm kiếm tăng lên. Do đó, thuật toán phải thực hiện nhiều phép giao N-list và ghi nhiều kết quả hơn.
+
+Xu hướng này thể hiện rõ trên tập \texttt{chess}. Đây là tập dữ liệu dày đặc, độ dài giao dịch trung bình cao, nên các item thường đồng xuất hiện với nhau. Khi \texttt{minsup} giảm, số lượng tổ hợp itemset dài tăng nhanh, kéo theo runtime tăng mạnh. Ngược lại, \texttt{retail} và \texttt{T10I4D100K} là các tập thưa hơn; mặc dù số giao dịch lớn, mỗi giao dịch ngắn hơn nên số tổ hợp frequent itemset tại cùng ngưỡng tương đối thường nhỏ hơn.
+
+So với SPMF, cài đặt của nhóm có ưu điểm là đường cong runtime phản ánh đúng xu hướng lý thuyết và kết quả sinh ra khớp với SPMF. Tuy nhiên, SPMF là thư viện đã được tối ưu lâu năm, do đó thường ổn định hơn về quản lý bộ nhớ, thao tác trên cấu trúc dữ liệu và chi phí I/O. Cài đặt của nhóm vẫn có thể bị ảnh hưởng bởi chi phí cấp phát N-list mới và ghi toàn bộ output ra file, đặc biệt ở các cấu hình có output size lớn.
+
+\subsection{Số lượng frequent itemset theo \texttt{minsup}}
+\label{subsec:experiment-output-size}
+
+Thí nghiệm output size ghi nhận số lượng frequent itemset sinh ra theo từng mức \texttt{minsup}. Đây là chỉ số quan trọng vì runtime và bộ nhớ của thuật toán FIM thường phụ thuộc mạnh vào kích thước output. Các biểu đồ output size được trình bày trong Hình~\ref{fig:output-size-chess} đến Hình~\ref{fig:output-size-t10}.
+
+\expfigure{figures/output_size_chess.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{chess}}{fig:output-size-chess}
+\expfigure{figures/output_size_mushroom.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{mushroom}}{fig:output-size-mushroom}
+\expfigure{figures/output_size_retail.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{retail}}{fig:output-size-retail}
+\expfigure{figures/output_size_T10I4D100K.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{T10I4D100K}}{fig:output-size-t10}
+
+Theo định nghĩa frequent itemset, một itemset $X$ được giữ lại nếu $sup(X) \geq minsup$. Khi \texttt{minsup} giảm, điều kiện này trở nên dễ thỏa hơn, vì vậy tập kết quả chỉ có thể giữ nguyên hoặc tăng lên. Điều này giải thích xu hướng output size tăng khi \texttt{minsup} giảm.
+
+Trên tập \texttt{chess}, output size tăng rất nhanh do đây là dữ liệu dense và có độ dài giao dịch trung bình lớn. Nhiều item cùng xuất hiện trong một giao dịch, làm số lượng tổ hợp itemset thỏa \texttt{minsup} tăng mạnh. Trên tập \texttt{retail}, dữ liệu thưa hơn nên số lượng frequent itemset tăng chậm hơn. Kết quả này phù hợp với lý thuyết ở Chương 1: không gian tìm kiếm có kích thước lũy thừa theo số item, nhưng tính chất Apriori cho phép tỉa mạnh hơn khi dữ liệu thưa hoặc \texttt{minsup} cao.
+
+Về so sánh với SPMF, output size của nhóm trùng với SPMF ở các cấu hình đã đối chiếu, cho thấy cài đặt không bỏ sót itemset và không sinh itemset không phổ biến. Điểm yếu còn lại không nằm ở độ đúng của output mà nằm ở chi phí xử lý khi output size rất lớn, vì việc lưu và ghi toàn bộ itemset có thể trở thành nút thắt cổ chai.
+
+\subsection{Sử dụng bộ nhớ}
+\label{subsec:experiment-memory}
+
+Thí nghiệm bộ nhớ được thực hiện tại một mức \texttt{minsup} trung bình cho mỗi tập dữ liệu. Nhóm so sánh phiên bản \texttt{basic} và \texttt{optimized}. Trong môi trường đo hiện tại, peak RSS không được lấy trực tiếp trong tiến trình Julia; vì vậy, báo cáo sử dụng lượng bộ nhớ cấp phát của Julia (\texttt{allocated\_bytes}) như một chỉ báo để so sánh tương đối giữa hai phiên bản. Kết quả chi tiết được trình bày trong Bảng~\ref{tab:memory-results} và Hình~\ref{fig:memory-usage}.
+
+\begin{table}[H]
+\centering
+\caption{Bộ nhớ cấp phát của phiên bản basic và optimized}
+\label{tab:memory-results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrr}
+\toprule
+Tập dữ liệu & Phiên bản & \texttt{minsup} & Số itemset & Thời gian (s) & Bộ nhớ cấp phát (MB) \\
+\midrule
+\texttt{chess} & basic & 2077 & 111,778 & 4.916 & 6036.02 \\
+\texttt{chess} & optimized & 2077 & 111,778 & 3.466 & 5963.33 \\
+\texttt{mushroom} & basic & 2437 & 2,735 & 0.048 & 88.88 \\
+\texttt{mushroom} & optimized & 2437 & 2,735 & 0.040 & 88.28 \\
+\texttt{retail} & basic & 661 & 277 & 0.730 & 159.43 \\
+\texttt{retail} & optimized & 661 & 277 & 0.746 & 158.97 \\
+\texttt{T10I4D100K} & basic & 750 & 561 & 55.998 & 965.09 \\
+\texttt{T10I4D100K} & optimized & 750 & 561 & 56.192 & 961.06 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\expfigure{figures/memory_usage.png}{So sánh bộ nhớ giữa bản basic và optimized}{fig:memory-usage}
+
+Kết quả cho thấy phiên bản optimized nhìn chung giảm nhẹ lượng bộ nhớ cấp phát so với phiên bản basic. Mức giảm này rõ nhất về mặt tuyệt đối trên \texttt{chess}, do tập dữ liệu dense sinh nhiều itemset và nhiều cấu trúc trung gian hơn. Trên \texttt{retail} và \texttt{T10I4D100K}, bộ nhớ giữa hai phiên bản gần tương đương, cho thấy chi phí chính có thể nằm ở việc lưu dữ liệu đầu vào, PPC-tree, N-list cơ sở và output thay vì chỉ ở số lượng ứng viên bị tỉa muộn.
+
+Về lý thuyết, bộ nhớ của PrePost phụ thuộc vào số node trong PPC-tree, số entry trong N-list và số itemset trung gian được sinh ra trong quá trình khai thác. Phiên bản optimized tỉa sớm các itemset không đạt \texttt{minsup}, do đó có thể giảm số cấu trúc trung gian được truyền xuống các bước đệ quy. Tuy nhiên, khi output thật sự không quá lớn hoặc chi phí lưu cấu trúc nền chiếm ưu thế, mức giảm bộ nhớ có thể không quá lớn.
+
+\subsection{Khả năng mở rộng}
+\label{subsec:experiment-scalability}
+
+Thí nghiệm scalability được thực hiện trên tập \texttt{retail}. Nhóm tạo các tập con có kích thước xấp xỉ 10\%, 25\%, 50\%, 75\% và 100\% số giao dịch. Tỉ lệ \texttt{minsup} được giữ ở mức 0.5\% để so sánh công bằng khi kích thước cơ sở dữ liệu tăng. Kết quả được trình bày trong Bảng~\ref{tab:scalability-results} và Hình~\ref{fig:scalability}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả scalability trên tập \texttt{retail}}
+\label{tab:scalability-results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Phiên bản & Tỉ lệ subset & Số giao dịch & \texttt{minsup} & Số itemset & Thời gian (ms) & Trạng thái \\
+\midrule
+optimized & 10\% & 8,816 & 44 & 718 & 454.00 & OK \\
+SPMF & 10\% & 8,816 & 44 & 718 & 410.85 & OK \\
+optimized & 25\% & 22,040 & 110 & 672 & 389.00 & OK \\
+SPMF & 25\% & 22,040 & 110 & 672 & 466.40 & OK \\
+optimized & 50\% & 44,081 & 220 & 617 & 843.00 & OK \\
+SPMF & 50\% & 44,081 & 220 & 617 & 567.85 & OK \\
+optimized & 75\% & 66,122 & 331 & 544 & 1,386.00 & OK \\
+SPMF & 75\% & 66,122 & 331 & 544 & 662.44 & OK \\
+optimized & 100\% & 88,162 & 441 & 580 & 2,580.00 & OK \\
+SPMF & 100\% & 88,162 & 441 & 580 & 752.16 & OK \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\expfigure{figures/scalability.png}{Thời gian chạy theo kích thước cơ sở dữ liệu trên tập \texttt{retail}}{fig:scalability}
+
+Khi tăng kích thước từ 10\% lên 100\%, số giao dịch tăng 10 lần, trong khi runtime của phiên bản optimized tăng khoảng 5.68 lần. Điều này cho thấy trên tập \texttt{retail} với tỉ lệ \texttt{minsup} cố định, runtime tăng dưới tuyến tính theo số giao dịch trong cấu hình đo được. Một nguyên nhân là \texttt{minsup} tuyệt đối cũng tăng theo kích thước dữ liệu, giúp tỉa bớt các itemset ít xuất hiện và làm output size không tăng đơn điệu theo số giao dịch.
+
+So với SPMF, cài đặt của nhóm cho kết quả output size giống nhau ở từng subset, nhưng runtime ở các mức 50\%, 75\% và 100\% cao hơn SPMF. Điều này phản ánh điểm mạnh của SPMF về tối ưu cài đặt, đặc biệt trong quản lý bộ nhớ, thao tác trên cấu trúc dữ liệu và chi phí I/O. Tuy nhiên, cài đặt của nhóm vẫn mở rộng được đến toàn bộ tập \texttt{retail} và thể hiện xu hướng tăng runtime hợp lý khi kích thước dữ liệu tăng.
+
+\subsection{Ảnh hưởng của độ dài giao dịch trung bình}
+\label{subsec:experiment-transaction-length}
+
+Để đánh giá ảnh hưởng của độ dài giao dịch trung bình, nhóm tạo các cơ sở dữ liệu tổng hợp gồm 10,000 giao dịch, 1,000 item và tỉ lệ \texttt{minsup} bằng 1\%. Độ dài giao dịch trung bình lần lượt là 5, 10, 20, 40 và 80. Kết quả được trình bày trong Bảng~\ref{tab:transaction-length-results} và Hình~\ref{fig:transaction-length}.
+
+\begin{table}[H]
+\centering
+\caption{Ảnh hưởng của độ dài giao dịch trung bình trên dữ liệu tổng hợp}
+\label{tab:transaction-length-results}
+\begin{tabular}{rrrrr}
+\toprule
+Độ dài TB & Số giao dịch & \texttt{minsup} & Số itemset & Thời gian (ms) \\
+\midrule
+5 & 10,000 & 100 & 0 & 2.00 \\
+10 & 10,000 & 100 & 514 & 731.00 \\
+20 & 10,000 & 100 & 1,000 & 8,290.00 \\
+40 & 10,000 & 100 & 1,000 & 28,988.00 \\
+80 & 10,000 & 100 & 499,673 & 1,743,193.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\expfigure{figures/transaction_length.png}{Ảnh hưởng của độ dài giao dịch trung bình đến runtime và output size}{fig:transaction-length}
+
+Kết quả cho thấy độ dài giao dịch trung bình ảnh hưởng rất mạnh đến thuật toán FIM. Khi giao dịch dài hơn, số tổ hợp item tiềm năng trong mỗi giao dịch tăng nhanh. Về mặt tổ hợp, một giao dịch có độ dài $\ell$ có thể chứa tới $2^\ell - 1$ itemset con khác rỗng. Do đó, khi dữ liệu trở nên dày hơn, số lượng pattern trung gian và số itemset thỏa \texttt{minsup} có thể tăng phi tuyến.
+
+Ở cấu hình \texttt{avg\_len = 5}, output của nhóm là file rỗng. Nhóm đã kiểm tra riêng trường hợp này bằng SPMF với \texttt{minsup = 100}. Vì tập dữ liệu có 10,000 giao dịch, ngưỡng này tương đương 1\% tổng số giao dịch. SPMF ghi nhận \texttt{Minsup = 100} và số frequent itemset bằng 0. Do đó, output rỗng của nhóm ở trường hợp \texttt{avg\_len = 5} là hợp lý, không phải lỗi ghi file.
+
+Khi \texttt{avg\_len} tăng lên 80, số frequent itemset đạt 499,673 và runtime tăng lên rất lớn. Điều này phù hợp với lý thuyết: khi dữ liệu dense hơn, các item đồng xuất hiện nhiều hơn, làm phép giao N-list sinh ra nhiều kết quả đạt \texttt{minsup}. Đây là một trong những tình huống khó đối với các thuật toán FIM, kể cả khi đã có cơ chế tỉa theo tính chất Apriori.
+
+\subsection{Nhận xét chung, điểm mạnh/yếu và hướng tối ưu}
+\label{subsec:experiment-summary}
+
+\subsubsection{Đối chiếu với yêu cầu thực nghiệm}
+
+Bảng~\ref{tab:experiment-checklist} tổng hợp mức độ đáp ứng các yêu cầu thực nghiệm chính.
+
+\begin{table}[H]
+\centering
+\caption{Checklist đối chiếu yêu cầu thực nghiệm}
+\label{tab:experiment-checklist}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{p{0.32\textwidth}p{0.20\textwidth}p{0.12\textwidth}p{0.30\textwidth}}
+\toprule
+Yêu cầu & Minh chứng & Trạng thái & Ghi chú \\
+\midrule
+Ít nhất 4 benchmark datasets & Bảng~\ref{tab:benchmark-datasets} & Đạt & Sử dụng \texttt{chess}, \texttt{mushroom}, \texttt{retail}, \texttt{T10I4D100K}. \\
+Correctness so với SPMF & Bảng~\ref{tab:correctness-results} & Đạt & Tỉ lệ khớp 100\%, không sai support. \\
+Runtime theo \texttt{minsup} & Hình~\ref{fig:runtime-chess}--\ref{fig:runtime-t10} & Đạt & Mỗi dataset có 6 mức \texttt{minsup}. \\
+Output size theo \texttt{minsup} & Hình~\ref{fig:output-size-chess}--\ref{fig:output-size-t10} & Đạt & Thể hiện quan hệ giữa \texttt{minsup} và số itemset sinh ra. \\
+Sử dụng bộ nhớ & Bảng~\ref{tab:memory-results}, Hình~\ref{fig:memory-usage} & Đạt có ghi chú & Dùng bộ nhớ cấp phát làm chỉ báo do peak RSS không đo trực tiếp được. \\
+Scalability 10/25/50/75/100 & Bảng~\ref{tab:scalability-results} & Đạt & Chạy trên tập \texttt{retail}. \\
+Ảnh hưởng độ dài giao dịch & Bảng~\ref{tab:transaction-length-results} & Đạt & Dữ liệu tổng hợp với \texttt{avg\_len} từ 5 đến 80. \\
+Biểu đồ rõ ràng & Các hình trong chương & Đạt & Runtime, output size, memory, scalability và transaction length. \\
+Phân tích kết quả & Toàn bộ Chương~\ref{sec:experiments} & Đạt & Có giải thích lý thuyết, so sánh với SPMF và hướng tối ưu. \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsubsection{Điểm mạnh và điểm yếu so với SPMF}
+
+So với SPMF, cài đặt của nhóm có một số điểm mạnh. Trước hết, kết quả correctness khớp 100\% với SPMF trên các benchmark được kiểm tra, cho thấy thuật toán sinh frequent itemset và tính support đúng. Thứ hai, nhóm có cả phiên bản basic và optimized, nhờ đó có thể đánh giá tác động của tỉa sớm đến thời gian chạy và bộ nhớ. Thứ ba, cài đặt được tổ chức rõ ràng theo các thành phần PPC-tree, N-list, tiền xử lý và khai thác, nên thuận lợi cho việc kiểm thử và mở rộng.
+
+Tuy nhiên, cài đặt của nhóm vẫn có một số hạn chế so với SPMF. SPMF là thư viện đã được tối ưu lâu năm, có cách tổ chức dữ liệu, quản lý bộ nhớ và xử lý I/O hiệu quả hơn. Kết quả scalability cho thấy ở các subset lớn của \texttt{retail}, runtime của nhóm cao hơn SPMF. Ngoài ra, cài đặt của nhóm có thể còn tốn chi phí ở bước giao N-list, cấp phát nhiều cấu trúc trung gian và ghi toàn bộ output ra file, đặc biệt khi dữ liệu dense hoặc output size rất lớn như trường hợp \texttt{chess} và synthetic \texttt{avg\_len = 80}.
+
+\subsubsection{Hướng tối ưu hóa tiếp theo}
+
+Bản optimized hiện tại là kết quả nhóm đã thực hiện, do đó các hướng dưới đây được xem là những tối ưu có thể áp dụng tiếp theo:
+
+\begin{enumerate}
+    \item \textbf{Tối ưu phép giao N-list.} Có thể dùng kỹ thuật two-pointer merge trên các N-list đã sắp xếp, đồng thời pruning sớm nếu support tối đa còn lại không thể đạt \texttt{minsup}. Điều này giúp giảm số phép so sánh trong quá trình sinh itemset mở rộng.
+    \item \textbf{Tối ưu bộ nhớ của PPC-tree và N-list.} Có thể dùng mảng/vector thay cho dictionary hoặc object lồng nhau khi miền item được ánh xạ sang chỉ số liên tục; nén các trường \texttt{pre}, \texttt{post}, \texttt{count}; tái sử dụng buffer để giảm cấp phát lặp.
+    \item \textbf{Tối ưu I/O.} Khi output size lớn, chi phí ghi file có thể ảnh hưởng đáng kể đến runtime. Có thể bổ sung chế độ \texttt{count-only} để đo runtime khai thác không bao gồm chi phí ghi toàn bộ itemset, hoặc dùng buffered writing để giảm overhead I/O.
+    \item \textbf{Tái sử dụng kết quả trung gian.} Với các itemset có cùng tiền tố, có thể cache support hoặc reuse một phần N-list trung gian để tránh thực hiện lại các phép giao giống nhau.
+    \item \textbf{Song song hóa.} Các nhánh theo prefix trong quá trình khai thác có thể được xử lý tương đối độc lập. Vì vậy, có thể song song hóa theo nhánh prefix hoặc theo từng cặp dataset/\texttt{minsup} trong quá trình thực nghiệm.
+\end{enumerate}
+
+\subsubsection{Giới hạn thực nghiệm}
+
+Correctness được kiểm tra trên một mức \texttt{minsup} đại diện cho mỗi dataset benchmark, trong khi runtime và output size được đánh giá trên nhiều mức \texttt{minsup}. Ngoài ra, thí nghiệm transaction length sử dụng dữ liệu tổng hợp để phân tích xu hướng ảnh hưởng của độ dài giao dịch trung bình, không nhằm thay thế đánh giá trên dữ liệu thực tế. Kết quả runtime cũng có thể bị ảnh hưởng bởi cấu hình máy, trạng thái hệ thống, JVM warm-up của SPMF và chi phí ghi output ra file.
+
+Tổng thể, các thí nghiệm cho thấy cài đặt của nhóm đạt tính đúng đắn so với SPMF và phản ánh đúng các xu hướng lý thuyết của bài toán FIM: giảm \texttt{minsup} làm tăng output size, dữ liệu dense tạo ra nhiều itemset hơn dữ liệu sparse, runtime và bộ nhớ phụ thuộc mạnh vào số pattern trung gian, và độ dài giao dịch trung bình có ảnh hưởng lớn đến chi phí khai thác.
