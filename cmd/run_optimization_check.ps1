@@ -6,5 +6,5 @@ New-Item -ItemType Directory -Force -Path "logs" | Out-Null
 
 Write-Host "Running Level 3 optimization comparison..."
 $JuliaCmd = if ($env:JULIA_CMD) { $env:JULIA_CMD } else { "julia" }
-& $JuliaCmd --project=. scripts\optimization_check.jl
+& $JuliaCmd --project=. experiments\optimization_check.jl
 exit $LASTEXITCODE

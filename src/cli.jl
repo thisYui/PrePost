@@ -1,7 +1,7 @@
 using PrePostFIM
 
 function usage()
-    println("Usage: julia --project=. src/cli.jl --input <path> --minsup <integer> --output <path>")
+    println("Usage: julia --project=. src/cli.jl --input <path> --minsup <integer> [--algorithm basic|optimized] --output <path>")
 end
 
 function parse_args(args::Vector{String})
@@ -9,7 +9,7 @@ function parse_args(args::Vector{String})
     i = 1
     while i <= length(args)
         arg = args[i]
-        if arg in ("--input", "--minsup", "--output")
+        if arg in ("--input", "--minsup", "--output", "--algorithm")
             if i == length(args)
                 throw(ArgumentError("missing value for $arg"))
             end
@@ -33,14 +33,20 @@ function main(args::Vector{String})
     input_path = parsed["--input"]
     output_path = parsed["--output"]
     minsup = parse(Int, parsed["--minsup"])
+    algorithm = get(parsed, "--algorithm", "optimized")
+    algorithm in ("basic", "optimized") || throw(ArgumentError("--algorithm must be basic or optimized"))
 
     db = read_spmf(input_path)
-    results, elapsed = time_function(() -> prepost(db, minsup))
+    miner = algorithm == "basic" ? prepost_basic : prepost_optimized
+    results, elapsed = time_function(() -> miner(db, minsup))
+    output_dir = dirname(output_path)
+    !isempty(output_dir) && mkpath(output_dir)
     write_spmf_output(output_path, results)
 
     println("Input: $input_path")
     println("Output: $output_path")
     println("minsup: $minsup")
+    println("Algorithm: $algorithm")
     println("Frequent itemsets: $(length(results))")
     println("Elapsed time: $(round(elapsed; digits = 6)) seconds")
     return 0

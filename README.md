@@ -62,13 +62,6 @@ PrePost/
 │       └── timer.jl
 │
 ├── tests/
-│   ├── runtests.jl
-│   ├── test_correctness.jl
-│   ├── test_ppc_tree.jl
-│   ├── test_nlist.jl
-│   ├── test_io.jl
-│   ├── test_benchmark.jl
-│   └── test_optimization.jl
 │
 ├── data/
 │   ├── toy/
@@ -96,36 +89,10 @@ PrePost/
 │       └── groceries_metadata.md
 │
 ├── cmd/                 # PowerShell scripts for Windows
-│   ├── setup_datasets.ps1
-│   ├── setup_julia_env.ps1
-│   ├── create_retail_subsets.ps1
-│   ├── check_project.ps1
-│   ├── run_tests.ps1
-│   ├── check_algorithms.ps1
-│   ├── run_optimization_check.ps1
-│   ├── run_benchmarks.ps1
-│   ├── download_and_run_spmf_fpgrowth.ps1
-│   └── clean_outputs.ps1
-│
 ├── scripts/             # Bash scripts for Linux/macOS and helper Julia scripts
-│   ├── setup_datasets.sh
-│   ├── setup_julia_env.sh
-│   ├── create_retail_subsets.sh
-│   ├── check_project.sh
-│   ├── run_tests.sh
-│   ├── check_algorithms.sh
-│   ├── run_optimization_check.sh
-│   ├── run_benchmarks.sh
-│   ├── clean_outputs.sh
-│   └── optimization_check.jl
-│
 ├── outputs/             # Generated outputs, ignored by Git
 ├── results/             # Generated experiment summaries, ignored by Git
 ├── logs/                # Generated logs, ignored by Git
-│
-├── spmf/
-│   ├── spmf.jar
-│   └── reference_outputs/
 │
 ├── notebooks/
 │   ├── demo.ipynb
