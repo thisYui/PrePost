@@ -5,7 +5,8 @@
 - **Môn học:** Khai thác dữ liệu và ứng dụng - CSC14004
 - **Đồ án:** Frequent Itemset Mining - Nghiên cứu, Cài đặt & Đánh giá
 - **Thuật toán được chọn:** PrePost
-- **Ngôn ngữ cài đặt:** Julia >= 1.9
+- **Ngôn ngữ cài đặt chính:** Julia >= 1.9
+- **Ứng dụng minh họa:** Market Basket Analysis trên dữ liệu groceries
 
 ## 2. Thành viên nhóm
 
@@ -30,7 +31,7 @@ Mục tiêu chính của đồ án:
 - Xuất tất cả frequent itemsets cùng support tương ứng.
 - Kiểm tra độ đúng bằng cách so sánh với expected output và SPMF.
 - Đánh giá thời gian chạy, bộ nhớ và khả năng mở rộng.
-- Ứng dụng kết quả frequent itemset vào sinh luật kết hợp.
+- Ứng dụng kết quả frequent itemset vào sinh luật kết hợp trong bài toán Market Basket Analysis.
 
 ## 4. Cấu trúc thư mục
 
@@ -84,18 +85,25 @@ PrePost/
 │   │   ├── retail_75.txt
 │   │   └── retail_100.txt
 │   │
+│   ├── synthetic/
+│   │   ├── synthetic_avg5.txt
+│   │   ├── synthetic_avg10.txt
+│   │   ├── synthetic_avg20.txt
+│   │   ├── synthetic_avg40.txt
+│   │   └── synthetic_avg80.txt
+│   │
 │   └── application/
 │       ├── groceries.txt
 │       └── groceries_metadata.md
 │
-├── cmd/                 # PowerShell scripts for Windows
-├── scripts/             # Bash scripts for Linux/macOS and helper Julia scripts
-├── outputs/             # Generated outputs, ignored by Git
-├── results/             # Generated experiment summaries, ignored by Git
-├── logs/                # Generated logs, ignored by Git
+├── cmd/                 # PowerShell scripts cho Windows
+├── scripts/             # Bash scripts cho Linux/macOS và helper Julia scripts
+├── outputs/             # Output sinh tự động, thường được ignore bởi Git
+├── logs/                # Log chạy thực nghiệm, thường được ignore bởi Git
 │
 ├── notebooks/
 │   ├── demo.ipynb
+│   ├── experiment_analysis.ipynb
 │   └── manual_example.ipynb
 │
 └── docs/
@@ -110,14 +118,16 @@ PrePost/
     └── figures/
 ```
 
-## 5. Cài đặt và chạy project
+## 5. Yêu cầu hệ thống
 
-### 5.1. Yêu cầu hệ thống
+Cần cài đặt:
 
 - Julia >= 1.9
 - Git
 - PowerShell 7 trên Windows, hoặc Bash trên Linux/macOS
 - Java >= 8 nếu cần chạy SPMF tham chiếu
+- Python >= 3.9 nếu cần chạy notebook phân tích hoặc trực quan hóa
+- Jupyter Notebook hoặc JupyterLab nếu cần mở notebook
 
 Kiểm tra Julia:
 
@@ -125,7 +135,15 @@ Kiểm tra Julia:
 julia --version
 ```
 
-### 5.2. Setup trên Windows
+Kiểm tra Java, nếu muốn chạy SPMF:
+
+```bash
+java -version
+```
+
+## 6. Cài đặt và chạy project
+
+### 6.1. Setup trên Windows
 
 Từ thư mục gốc project, chạy lần lượt:
 
@@ -149,7 +167,7 @@ Kiểm tra lại cấu trúc project, dữ liệu, source code và các file c�
 .\cmd\check_project.ps1
 ```
 
-Sau đó chạy kiểm thử:
+Chạy kiểm thử:
 
 ```powershell
 .\cmd\run_tests.ps1
@@ -161,7 +179,7 @@ Kiểm tra thuật toán trên 5 toy datasets:
 .\cmd\check_algorithms.ps1
 ```
 
-Kiểm tra so sánh phiên bản cơ bản và tối ưu cho Level 3:
+Kiểm tra so sánh phiên bản cơ bản và tối ưu:
 
 ```powershell
 .\cmd\run_optimization_check.ps1
@@ -185,7 +203,7 @@ Dọn các file output sinh ra:
 .\cmd\clean_outputs.ps1
 ```
 
-### 5.3. Setup trên Linux/macOS
+### 6.2. Setup trên Linux/macOS
 
 Cấp quyền chạy cho các script nếu cần:
 
@@ -245,7 +263,7 @@ Dọn các file output sinh ra:
 bash scripts/clean_outputs.sh
 ```
 
-## 6. Định dạng dữ liệu đầu vào
+## 7. Định dạng dữ liệu đầu vào
 
 Chương trình hỗ trợ định dạng dữ liệu giống SPMF.
 
@@ -267,7 +285,7 @@ Quy ước:
 - Các dòng rỗng sẽ được bỏ qua.
 - Nếu một dòng có phần sau ký tự `#`, phần đó được xem như chú thích và được bỏ qua.
 
-## 7. Cách chạy thuật toán PrePost bằng CLI
+## 8. Cách chạy thuật toán PrePost bằng CLI
 
 Chạy trên dữ liệu toy:
 
@@ -281,7 +299,7 @@ Chạy trên dữ liệu benchmark:
 julia --project=. src/cli.jl --input data/benchmark/chess.txt --minsup 2000 --output outputs/benchmark/our/chess_minsup2000.out
 ```
 
-### Tham số dòng lệnh
+### 8.1. Tham số dòng lệnh
 
 | Tham số | Ý nghĩa | Bắt buộc |
 |---|---|---|
@@ -289,7 +307,7 @@ julia --project=. src/cli.jl --input data/benchmark/chess.txt --minsup 2000 --ou
 | `--minsup` | Ngưỡng support tuyệt đối | Có |
 | `--output` | Đường dẫn file kết quả | Có |
 
-## 8. Định dạng kết quả đầu ra
+## 9. Định dạng kết quả đầu ra
 
 File output lưu frequent itemsets theo định dạng:
 
@@ -307,9 +325,9 @@ Trong đó:
 - Phần trước `#SUP:` là itemset.
 - Phần sau `#SUP:` là support tuyệt đối của itemset.
 - Các item trong mỗi itemset được sắp xếp tăng dần.
-- Kết quả được chuẩn hóa để dễ so sánh với expected output.
+- Kết quả được chuẩn hóa để dễ so sánh với expected output và SPMF.
 
-## 9. Kiểm thử
+## 10. Kiểm thử
 
 Dự án có bộ unit test tự động trong thư mục `tests/`.
 
@@ -342,7 +360,7 @@ Các nhóm test chính:
 | `test_benchmark.jl` | Kiểm tra sự tồn tại của dữ liệu benchmark và benchmark helper |
 | `test_optimization.jl` | Kiểm tra hai phiên bản basic và optimized cho cùng kết quả |
 
-### Output kiểm thử gần nhất
+Output kiểm thử gần nhất:
 
 ```text
 Running Julia tests...
@@ -352,7 +370,7 @@ PrePostFIM    |  103    103  3.9s
 Finished PrePostFIM test suite.
 ```
 
-## 10. Kiểm tra thuật toán trên 5 toy datasets
+## 11. Kiểm tra thuật toán trên toy datasets
 
 Chạy trên Windows:
 
@@ -411,7 +429,7 @@ Bộ toy datasets dùng cho Level 2:
 | `example_with_infrequent_items.txt` | Có item không phổ biến cần bị loại | 2 | 6 |
 | `example_duplicates_long.txt` | Giao dịch trùng và itemset dài | 2 | 15 |
 
-## 11. Level 3 - So sánh phiên bản cơ bản và tối ưu
+## 12. Level 3 - So sánh phiên bản cơ bản và tối ưu
 
 Dự án cung cấp hai phiên bản:
 
@@ -453,9 +471,9 @@ toy_with_infrequent_items minsup=2 itemsets=6 match=true basic=0.0s optimized=0.
 toy_duplicates_long minsup=2 itemsets=15 match=true basic=0.0s optimized=0.0s speedup=Infx
 ```
 
-Lưu ý: Hai toy datasets có kích thước nhỏ nên thời gian chạy của phiên bản tối ưu có thể gần bằng 0 giây. Kết quả này chủ yếu dùng để kiểm tra rằng hai phiên bản sinh cùng itemset và support. Phần đánh giá hiệu năng đầy đủ được thực hiện ở Chương 4.
+Lưu ý: các toy datasets có kích thước nhỏ nên thời gian chạy của phiên bản tối ưu có thể gần bằng 0 giây. Kết quả này chủ yếu dùng để kiểm tra rằng hai phiên bản sinh cùng itemset và support. Phần đánh giá hiệu năng đầy đủ được thực hiện ở Chương 4.
 
-## 12. Benchmark datasets
+## 13. Benchmark datasets
 
 Các tập dữ liệu dùng trong thực nghiệm:
 
@@ -466,7 +484,7 @@ Các tập dữ liệu dùng trong thực nghiệm:
 | Retail | 88,162 | 16,470 | 10.3 | Thưa, dữ liệu thực tế |
 | T10I4D100K | 100,000 | 870 | 10.1 | Tổng hợp, thưa |
 
-Các file hiện được đặt trong:
+Các file benchmark được đặt trong:
 
 ```text
 data/benchmark/
@@ -482,7 +500,7 @@ data/subsets/retail_75.txt
 data/subsets/retail_100.txt
 ```
 
-## 13. Chạy benchmark cho Chương 4
+## 14. Chạy benchmark cho Chương 4
 
 Chạy trên Windows:
 
@@ -506,7 +524,7 @@ logs/
 
 Các thư mục này là output sinh tự động và thường được ignore bởi Git.
 
-## 14. Ứng dụng thực tế
+## 15. Ứng dụng thực tế - Market Basket Analysis
 
 Nhóm chọn ứng dụng:
 
@@ -528,8 +546,14 @@ Quy trình:
 3. Lọc các luật thỏa:
    - `support(X ∪ Y) >= minsup`
    - `confidence(X => Y) >= minconf`
-4. Sắp xếp luật theo `lift`.
-5. Báo cáo top-10 luật có lift cao nhất.
+4. Tính các chỉ số đánh giá luật:
+   - support
+   - confidence
+   - lift
+   - leverage
+   - conviction
+5. Sắp xếp luật theo `lift`.
+6. Báo cáo các luật nổi bật và phân tích ý nghĩa kinh doanh.
 
 Công thức:
 
@@ -539,7 +563,225 @@ confidence(X => Y) = support(X ∪ Y) / support(X)
 lift(X => Y) = confidence(X => Y) / support(Y)
 ```
 
-## 15. So sánh với SPMF
+Ý nghĩa ứng dụng:
+
+- Tìm các mặt hàng thường được mua cùng nhau.
+- Gợi ý bố trí sản phẩm trong cửa hàng.
+- Hỗ trợ tạo combo khuyến mãi.
+- Hỗ trợ đề xuất sản phẩm mua kèm.
+- Phân tích hành vi mua sắm của khách hàng.
+
+Ví dụ luật kết hợp:
+
+```text
+root vegetables, whole milk => other vegetables
+```
+
+Luật này có thể được hiểu là: khi khách hàng mua `root vegetables` và `whole milk`, họ có xu hướng mua thêm `other vegetables`. Cửa hàng có thể tận dụng kết quả này để bố trí sản phẩm liên quan gần nhau hoặc đề xuất mua kèm.
+
+## 16. Hướng dẫn chạy notebook
+
+Dự án có thư mục `notebooks/` chứa các notebook dùng để minh họa thuật toán, phân tích thực nghiệm và ứng dụng thực tế.
+
+```text
+notebooks/
+├── demo.ipynb
+├── experiment_analysis.ipynb
+└── manual_example.ipynb
+```
+
+### 16.1. Mục đích từng notebook
+
+| Notebook | Mục đích |
+|---|---|
+| `manual_example.ipynb` | Minh họa từng bước cách thuật toán PrePost hoạt động trên ví dụ nhỏ, bao gồm PPC-tree, mã `pre`, mã `post` và N-list. |
+| `demo.ipynb` | Demo quy trình ứng dụng PrePost cho Market Basket Analysis trên dữ liệu groceries. Notebook này đọc dữ liệu giao dịch, khai thác frequent itemsets, sinh luật kết hợp, tính các chỉ số đánh giá và trực quan hóa kết quả. |
+| `experiment_analysis.ipynb` | Phân tích kết quả thực nghiệm, đọc các file trong `results/`, tổng hợp thời gian chạy, số lượng itemset và trực quan hóa benchmark. |
+
+### 16.2. Cài đặt package để chạy notebook
+
+Cài Jupyter và các thư viện Python thường dùng:
+
+```bash
+pip install pandas numpy matplotlib seaborn mlxtend jupyter
+```
+
+Nếu muốn chạy notebook với kernel Julia, cài thêm `IJulia`:
+
+```bash
+julia --project=.
+```
+
+Sau đó trong Julia REPL:
+
+```julia
+using Pkg
+Pkg.add("IJulia")
+```
+
+### 16.3. Cách mở notebook
+
+Từ thư mục gốc của project, chạy:
+
+```bash
+jupyter notebook
+```
+
+hoặc:
+
+```bash
+jupyter lab
+```
+
+Sau đó mở file trong thư mục:
+
+```text
+notebooks/
+```
+
+Nên mở Jupyter từ **thư mục gốc project** thay vì mở trực tiếp trong thư mục `notebooks/`, vì nhiều đường dẫn trong notebook có thể tham chiếu đến `data/`, `src/`, `outputs/` hoặc `results/`.
+
+### 16.4. Chuẩn bị dữ liệu trước khi chạy notebook
+
+Trước khi chạy notebook, nên setup dữ liệu và môi trường Julia.
+
+Trên Windows:
+
+```powershell
+.\cmd\setup_datasets.ps1
+.\cmd\setup_julia_env.ps1
+.\cmd\create_retail_subsets.ps1
+```
+
+Trên Linux/macOS:
+
+```bash
+bash scripts/setup_datasets.sh
+bash scripts/setup_julia_env.sh
+bash scripts/create_retail_subsets.sh
+```
+
+Nếu notebook phân tích benchmark, cần chạy benchmark trước để sinh dữ liệu trong `results/`:
+
+Windows:
+
+```powershell
+.\cmd\run_benchmarks.ps1
+```
+
+Linux/macOS:
+
+```bash
+bash scripts/run_benchmarks.sh
+```
+
+### 16.5. Thông tin về `demo.ipynb`
+
+Notebook `demo.ipynb` minh họa ứng dụng của frequent itemset mining vào bài toán **Market Basket Analysis**.
+
+Quy trình chính trong notebook gồm:
+
+1. Đọc dữ liệu giao dịch từ tập groceries.
+2. Tiền xử lý dữ liệu thành danh sách transaction.
+3. Khám phá dữ liệu ban đầu, ví dụ:
+   - số lượng transaction;
+   - số lượng item khác nhau;
+   - độ dài trung bình của giỏ hàng;
+   - các item phổ biến nhất.
+4. Chạy thuật toán PrePost hoặc phiên bản fallback để tìm frequent itemsets.
+5. Sinh luật kết hợp từ frequent itemsets.
+6. Tính các chỉ số đánh giá luật:
+   - support;
+   - confidence;
+   - lift;
+   - leverage;
+   - conviction.
+7. Trực quan hóa kết quả:
+   - biểu đồ item phổ biến;
+   - phân bố kích thước giỏ hàng;
+   - ma trận co-occurrence;
+   - heatmap lift;
+   - bubble chart cho luật kết hợp.
+8. Phân tích ý nghĩa kinh doanh của các luật kết hợp.
+
+Notebook này giúp trả lời các câu hỏi:
+
+- Những mặt hàng nào thường được mua cùng nhau?
+- Những itemset nào xuất hiện phổ biến trong dữ liệu?
+- Luật kết hợp nào có độ tin cậy cao?
+- Những luật nào có lift cao và có thể dùng để gợi ý mua kèm?
+- Có thể áp dụng kết quả vào bố trí sản phẩm hoặc khuyến mãi như thế nào?
+
+### 16.6. Kết quả chính trong notebook demo
+
+Với dữ liệu groceries, notebook thực hiện phân tích trên dữ liệu giao dịch bán lẻ gồm nhiều mặt hàng tiêu dùng hằng ngày.
+
+Một số mặt hàng phổ biến thường xuất hiện trong dữ liệu gồm:
+
+- `whole milk`
+- `other vegetables`
+- `rolls/buns`
+- `soda`
+- `yogurt`
+- `root vegetables`
+
+Một số hướng ứng dụng từ các luật kết hợp:
+
+- Đặt các sản phẩm thường mua cùng nhau ở vị trí gần nhau.
+- Tạo combo khuyến mãi.
+- Đề xuất sản phẩm mua kèm.
+- Hỗ trợ phân tích hành vi mua sắm của khách hàng.
+
+Ví dụ, nếu luật có dạng:
+
+```text
+root vegetables, whole milk => other vegetables
+```
+
+thì có thể hiểu rằng khi khách hàng mua `root vegetables` và `whole milk`, họ có xu hướng mua thêm `other vegetables`.
+
+### 16.7. Lưu ý khi chạy notebook
+
+- Nếu notebook gọi trực tiếp Julia CLI, cần đảm bảo lệnh `julia` đã có trong `PATH`.
+- Nếu notebook đọc file trong `data/`, cần chạy các script setup dữ liệu trước.
+- Nếu notebook đọc kết quả trong `outputs/` hoặc `results/`, cần chạy thuật toán hoặc benchmark trước để sinh file.
+- Nếu chạy trên Windows, cần chú ý khác biệt giữa dấu `/` và `\` trong đường dẫn.
+- Nếu notebook không chạy được do thiếu package Python, cài thêm bằng `pip install`.
+- Nếu notebook không nhận kernel Julia, cần cài `IJulia`.
+- Nên chạy notebook theo thứ tự từ trên xuống dưới để tránh lỗi thiếu biến hoặc thiếu file trung gian.
+
+### 16.8. Thứ tự chạy khuyến nghị
+
+Để tái hiện đầy đủ kết quả, nên chạy theo thứ tự:
+
+```text
+1. Setup dữ liệu
+2. Setup môi trường Julia
+3. Chạy test để kiểm tra project
+4. Chạy thuật toán hoặc benchmark nếu cần
+5. Mở notebook
+6. Chạy notebook từ trên xuống dưới
+```
+
+Trên Windows:
+
+```powershell
+.\cmd\setup_datasets.ps1
+.\cmd\setup_julia_env.ps1
+.\cmd\run_tests.ps1
+jupyter notebook
+```
+
+Trên Linux/macOS:
+
+```bash
+bash scripts/setup_datasets.sh
+bash scripts/setup_julia_env.sh
+bash scripts/run_tests.sh
+jupyter notebook
+```
+
+## 17. So sánh với SPMF
 
 SPMF chỉ được sử dụng làm chương trình tham chiếu để kiểm tra độ đúng. Nhóm không sử dụng hoặc sao chép mã nguồn từ SPMF.
 
@@ -558,7 +800,7 @@ Trong đó:
 - Thuật toán SPMF dùng để sinh reference output là **FP-Growth** cho bài toán frequent itemset mining.
 - Output của SPMF chỉ dùng để so sánh độ đúng, không dùng trong quá trình cài đặt thuật toán PrePost.
 
-### 15.1. Tải SPMF và sinh output tham chiếu bằng FP-Growth
+### 17.1. Tải SPMF và sinh output tham chiếu bằng FP-Growth
 
 Trên Windows, chạy script:
 
@@ -584,7 +826,7 @@ spmf/reference_outputs/retail_fpgrowth_minsup441.out
 spmf/reference_outputs/T10I4D100K_fpgrowth_minsup1000.out
 ```
 
-### 15.2. Minsup dùng khi chạy SPMF
+### 17.2. Minsup dùng khi chạy SPMF
 
 Cài đặt Julia của nhóm nhận `minsup` là **support tuyệt đối**. Vì vậy khi chạy SPMF để so sánh, nhóm cũng dùng cùng giá trị minsup tuyệt đối.
 
@@ -607,15 +849,14 @@ Ví dụ với Chess:
 ceil(0.80 * 3196) = 2557
 ```
 
-### 15.3. Lệnh chạy FP-Growth thủ công
+### 17.3. Lệnh chạy FP-Growth thủ công
 
-Nếu không dùng script, có thể chạy trực tiếp như sau:
+Nếu không dùng script, có thể chạy trực tiếp như sau trên Windows PowerShell:
 
 ```powershell
 java -jar spmf\spmf.jar run FPGrowth_itemsets `
-  dataenchmark\chess.txt `
-  spmf
-eference_outputs\chess_fpgrowth_minsup2557.out `
+  data\benchmark\chess.txt `
+  spmf\reference_outputs\chess_fpgrowth_minsup2557.out `
   2557
 ```
 
@@ -623,50 +864,33 @@ Các dataset còn lại:
 
 ```powershell
 java -jar spmf\spmf.jar run FPGrowth_itemsets `
-  dataenchmark\mushroom.txt `
-  spmf
-eference_outputs\mushroom_fpgrowth_minsup2438.out `
+  data\benchmark\mushroom.txt `
+  spmf\reference_outputs\mushroom_fpgrowth_minsup2438.out `
   2438
 
 java -jar spmf\spmf.jar run FPGrowth_itemsets `
-  dataenchmark
-etail.txt `
-  spmf
-eference_outputs
-etail_fpgrowth_minsup441.out `
+  data\benchmark\retail.txt `
+  spmf\reference_outputs\retail_fpgrowth_minsup441.out `
   441
 
 java -jar spmf\spmf.jar run FPGrowth_itemsets `
-  dataenchmark\T10I4D100K.txt `
-  spmf
-eference_outputs\T10I4D100K_fpgrowth_minsup1000.out `
+  data\benchmark\T10I4D100K.txt `
+  spmf\reference_outputs\T10I4D100K_fpgrowth_minsup1000.out `
   1000
 ```
-
-### 15.4. Quy trình so sánh với SPMF
-
-Quy trình so sánh:
-
-1. Chạy thuật toán của nhóm trên cùng input và cùng `minsup`.
-2. Chạy SPMF FP-Growth trên cùng input và cùng `minsup`.
-3. Chuẩn hóa output của cả hai bên.
-4. So sánh:
-   - số lượng frequent itemsets;
-   - support của từng itemset;
-   - tỉ lệ itemset khớp hoàn toàn.
 
 Ví dụ chạy Julia trên Chess với cùng `minsup = 2557`:
 
 ```powershell
 julia --project=. src\cli.jl `
-  --input dataenchmark\chess.txt `
+  --input data\benchmark\chess.txt `
   --minsup 2557 `
-  --output outputsenchmark\ours\chess_minsup2557.out
+  --output outputs\benchmark\ours\chess_minsup2557.out
 ```
 
 Lưu ý: Nếu SPMF báo lỗi khi truyền `minsup` dạng số nguyên, có thể đổi sang dạng phần trăm tương ứng, ví dụ `80%`. Khi báo cáo, cần ghi rõ hai cách biểu diễn này là tương đương trên cùng dataset.
 
-## 16. Reproducibility
+## 18. Reproducibility
 
 Để đảm bảo kết quả có thể tái sản xuất:
 
@@ -705,7 +929,18 @@ bash scripts/check_algorithms.sh
 bash scripts/run_optimization_check.sh
 ```
 
-## 17. Tài liệu tham khảo
+Nếu cần tái hiện notebook:
+
+```text
+1. Chạy setup dữ liệu.
+2. Chạy setup môi trường Julia.
+3. Chạy test để kiểm tra project.
+4. Chạy benchmark nếu notebook cần đọc file trong results/.
+5. Mở Jupyter từ thư mục gốc project.
+6. Chạy notebook từ trên xuống dưới.
+```
+
+## 19. Tài liệu tham khảo
 
 1. Deng, Z. H., Wang, Z., & Jiang, J. J. PrePost: A new method for mining frequent itemsets based on N-lists.
 2. Deng, Z. H., & Lv, S. PrePost+: An efficient N-lists-based algorithm for mining frequent itemsets via children-parent equivalence pruning.
