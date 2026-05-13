@@ -25,7 +25,7 @@ end
 
 function spmf_minsup_parameter(minsup::Integer, transactions::Integer)::String
     transactions > 0 || throw(ArgumentError("transactions must be positive for SPMF minsup conversion"))
-    return string(minsup)
+    return string(((minsup - 1.0e-6) / transactions) * 100.0, "%")
 end
 
 function mine_with_algorithm(db::TransactionDB, algorithm::AbstractString, minsup::Integer)
