@@ -1,0 +1,9 @@
+dataset,algorithm,minsup,itemsets,elapsed_seconds,allocated_bytes,allocated_mb,peak_memory_mb,measured_memory_type,status
+chess,basic,2077,111778,4.9156497,6329227543,6036.021750450134,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded
+chess,optimized,2077,111778,3.4662605,6253001544,5963.326972961426,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded
+mushroom,basic,2437,2735,0.048332,93201786,88.8841495513916,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded
+mushroom,optimized,2437,2735,0.0395201,92570122,88.28174781799316,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded
+retail,basic,661,277,0.7303604,167175100,159.43059921264648,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded
+retail,optimized,661,277,0.745707,166695593,158.97330570220947,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded
+T10I4D100K,basic,750,561,55.9981454,1011974163,965.093768119812,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded
+T10I4D100K,optimized,750,561,56.1924797,1007741575,961.0572576522827,NaN,julia_allocated_bytes,WARN: peak RSS unavailable in-process; allocated bytes recorded

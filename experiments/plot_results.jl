@@ -1,6 +1,7 @@
 using CSV
 using DataFrames
 using Plots
+using StatsPlots
 
 include("config.jl")
 include("args.jl")

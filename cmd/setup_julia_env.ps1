@@ -77,7 +77,7 @@ else {
 # -----------------------------
 Write-Host "`n[4/5] Testing required packages..." -ForegroundColor Cyan
 
-julia --project=. -e "using ArgParse, CSV, DataFrames, BenchmarkTools, Plots, StatsBase, DataStructures; println(""OK: all required packages loaded"")"
+julia --project=. -e "using ArgParse, CSV, DataFrames, BenchmarkTools, Plots, StatsPlots, StatsBase, DataStructures; println(""OK: all required packages loaded"")"
 
 # -----------------------------
 # 5. Chay convert Groceries neu co

@@ -1,0 +1,5 @@
+dataset,minsup,our_itemsets,spmf_itemsets,matched_itemsets,missing_in_our,extra_in_our,support_mismatch,match_ratio,status
+chess,2077,111778,111778,111778,0,0,0,1.0,PASS
+mushroom,2437,2735,2735,2735,0,0,0,1.0,PASS
+retail,661,277,277,277,0,0,0,1.0,PASS
+T10I4D100K,750,561,561,561,0,0,0,1.0,PASS
