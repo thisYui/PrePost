@@ -1,0 +1,334 @@
+\section{Ứng dụng thực tế: Phân tích giỏ hàng}
+\label{sec:application}
+
+Chương này trình bày phần ứng dụng thực tế của thuật toán khai thác tập phổ biến trong bài toán \textit{Market Basket Analysis}. Sau khi đã cài đặt và đánh giá thuật toán PrePost ở các chương trước, nhóm sử dụng kết quả khai thác frequent itemset để sinh luật kết hợp trên dữ liệu giao dịch bán lẻ. Mục tiêu là tìm ra các nhóm sản phẩm thường được mua cùng nhau, từ đó đề xuất một số hướng ứng dụng như bố trí sản phẩm, tạo combo khuyến mãi và gợi ý mua kèm.
+
+Dữ liệu sử dụng trong chương này là file \texttt{groceries.txt}, trong đó mỗi dòng tương ứng với một giao dịch mua hàng và các item trong giao dịch được phân tách bằng dấu phẩy. Toàn bộ quá trình xử lý, trực quan hóa và sinh luật được thực hiện trong notebook ứng dụng. Các hình ảnh từ notebook đã được lưu vào thư mục \texttt{figures/} để chèn trực tiếp vào báo cáo.
+
+% Lệnh chèn hình cho Chương 5. Nếu thiếu hình, báo cáo vẫn biên dịch được và hiển thị khung nhắc tên file.
+\providecommand{\appfigure}[3]{%
+\begin{figure}[H]
+\centering
+\IfFileExists{#1}{\includegraphics[width=0.88\textwidth]{#1}}{\fbox{\begin{minipage}{0.82\textwidth}\centering\vspace{0.8cm}Thiếu hình: \texttt{#1}\\Vui lòng copy hình từ notebook vào thư mục \texttt{figures/}.\vspace{0.8cm}\end{minipage}}}
+\caption{#2}
+\label{#3}
+\end{figure}
+}
+
+\subsection{Mục tiêu ứng dụng}
+\label{subsec:application-objectives}
+
+Trong ngữ cảnh bán lẻ, mỗi giao dịch có thể được xem là một tập item. Việc khai thác frequent itemset giúp phát hiện các nhóm sản phẩm xuất hiện thường xuyên trong cùng giỏ hàng. Từ các frequent itemset này, nhóm sinh các luật kết hợp có dạng:
+
+\begin{equation}
+    X \Rightarrow Y,
+\end{equation}
+
+trong đó $X$ là vế điều kiện, $Y$ là vế kết quả và $X \cap Y = \emptyset$. Một luật như \texttt{butter} $\Rightarrow$ \texttt{whole milk} được hiểu là: trong các giao dịch có mua \texttt{butter}, khách hàng có xu hướng mua thêm \texttt{whole milk}. Các luật như vậy có thể hỗ trợ nhiều quyết định kinh doanh, chẳng hạn:
+
+\begin{itemize}
+    \item đặt các sản phẩm có quan hệ mua kèm gần nhau để tăng khả năng mua chéo;
+    \item tạo combo khuyến mãi cho các cặp hoặc nhóm sản phẩm có quan hệ mạnh;
+    \item gợi ý sản phẩm bổ sung tại quầy thanh toán hoặc trên hệ thống thương mại điện tử;
+    \item hiểu rõ hơn hành vi mua hàng để thiết kế danh mục sản phẩm hợp lý.
+\end{itemize}
+
+Trong chương này, nhóm không chỉ liệt kê các frequent itemset mà còn đánh giá luật kết hợp bằng các chỉ số \texttt{support}, \texttt{confidence}, \texttt{lift}, \texttt{leverage} và \texttt{conviction}. Trong đó, \texttt{lift} được dùng để nhận biết quan hệ mua kèm có cao hơn kỳ vọng ngẫu nhiên hay không; còn \texttt{support} và \texttt{support\_count} giúp tránh chọn các luật quá hiếm.
+
+\subsection{Mô tả dữ liệu và tiền xử lý}
+\label{subsec:application-data-preprocessing}
+
+Notebook phát hiện dữ liệu có định dạng mỗi dòng là một transaction, các item phân tách bằng dấu phẩy. Sau khi đọc dữ liệu, nhóm chuẩn hóa tên item bằng cách loại bỏ khoảng trắng thừa và chuyển về chữ thường. Các item trùng lặp trong cùng một giao dịch cũng được loại bỏ để mỗi transaction là một tập item đúng nghĩa.
+
+Bảng~\ref{tab:application-data-summary} trình bày thông tin tổng quan của dữ liệu sau tiền xử lý.
+
+\begin{table}[H]
+\centering
+\caption{Tổng quan dữ liệu \texttt{groceries.txt} sau tiền xử lý}
+\label{tab:application-data-summary}
+\begin{tabular}{lr}
+\toprule
+Thông tin & Giá trị \\
+\midrule
+Số dòng không rỗng ban đầu & 9,835 \\
+Số giao dịch sau xử lý & 9,835 \\
+Số item khác nhau & 169 \\
+Độ dài giỏ hàng trung bình & 4.41 item \\
+Độ dài giỏ hàng nhỏ nhất & 1 item \\
+Độ dài giỏ hàng lớn nhất & 32 item \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Kết quả ở Bảng~\ref{tab:application-data-summary} cho thấy đây là tập dữ liệu có quy mô vừa, phù hợp để minh họa bài toán phân tích giỏ hàng. Số item khác nhau không quá lớn, nhưng số giao dịch đủ để các chỉ số support và confidence có ý nghĩa thống kê ở mức cơ bản. Độ dài giỏ hàng trung bình là 4.41 item, cho thấy phần lớn giao dịch không quá dài; do đó các luật có một hoặc hai item ở vế trái thường dễ diễn giải và dễ áp dụng hơn trong thực tế.
+
+\subsection{Khám phá dữ liệu ban đầu}
+\label{subsec:application-eda}
+
+Trước khi chạy thuật toán khai thác frequent itemset, nhóm thực hiện một số bước khám phá dữ liệu nhằm hiểu đặc điểm của tập giao dịch. Các phân tích này gồm thống kê top item phổ biến, ma trận đồng xuất hiện giữa các item phổ biến và phân bố kích thước giỏ hàng.
+
+\subsubsection{Các item phổ biến nhất}
+
+Bảng~\ref{tab:application-top-items} liệt kê 15 item có số lượng giao dịch chứa item cao nhất. Đây là các sản phẩm nền tảng có tần suất xuất hiện lớn và thường đóng vai trò quan trọng khi hình thành luật kết hợp.
+
+\begin{table}[H]
+\centering
+\caption{Top 15 item xuất hiện nhiều nhất trong dữ liệu}
+\label{tab:application-top-items}
+\begin{tabular}{lrr}
+\toprule
+Item & Số giao dịch & Support \\
+\midrule
+\texttt{whole milk} & 2,513 & 0.2555 \\
+\texttt{other vegetables} & 1,903 & 0.1935 \\
+\texttt{rolls/buns} & 1,809 & 0.1839 \\
+\texttt{soda} & 1,715 & 0.1744 \\
+\texttt{yogurt} & 1,372 & 0.1395 \\
+\texttt{bottled water} & 1,087 & 0.1105 \\
+\texttt{root vegetables} & 1,072 & 0.1090 \\
+\texttt{tropical fruit} & 1,032 & 0.1049 \\
+\texttt{shopping bags} & 969 & 0.0985 \\
+\texttt{sausage} & 924 & 0.0940 \\
+\texttt{pastry} & 875 & 0.0890 \\
+\texttt{citrus fruit} & 814 & 0.0828 \\
+\texttt{bottled beer} & 792 & 0.0805 \\
+\texttt{newspapers} & 785 & 0.0798 \\
+\texttt{canned beer} & 764 & 0.0777 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\appfigure{figures/mba_top_items.png}{Top 15 item xuất hiện nhiều nhất trong tập \texttt{groceries}}{fig:application-top-items}
+
+Có thể thấy \texttt{whole milk}, \texttt{other vegetables}, \texttt{rolls/buns}, \texttt{soda} và \texttt{yogurt} là các item xuất hiện nhiều nhất. Tuy nhiên, item phổ biến chưa chắc đã tạo ra luật kết hợp tốt. Ví dụ, \texttt{whole milk} xuất hiện trong nhiều giao dịch nên có thể dẫn đến confidence cao một cách tự nhiên. Vì vậy, ngoài support, cần xem thêm lift để đánh giá liệu quan hệ mua kèm có thật sự cao hơn kỳ vọng ngẫu nhiên hay không.
+
+\subsubsection{Ma trận đồng xuất hiện}
+
+Để quan sát trực quan mối quan hệ giữa các item phổ biến, nhóm xây dựng ma trận đồng xuất hiện cho 15 item đứng đầu. Mỗi ô trong ma trận cho biết số giao dịch chứa đồng thời hai item tương ứng.
+
+\appfigure{figures/mba_cooccurrence_top15.png}{Ma trận đồng xuất hiện của top 15 item phổ biến}{fig:application-cooccurrence}
+
+Ma trận đồng xuất hiện cho thấy một số cặp sản phẩm có tần suất cùng xuất hiện cao, đặc biệt quanh các nhóm thực phẩm thiết yếu như sữa, rau củ, bánh mì và sữa chua. Tuy nhiên, ma trận này chỉ phản ánh số lần xuất hiện chung, chưa chuẩn hóa theo mức phổ biến riêng của từng item. Do đó, nó được dùng như bước kiểm tra trực quan ban đầu, còn quyết định chọn luật cần dựa trên các chỉ số như confidence và lift.
+
+\subsubsection{Phân bố kích thước giỏ hàng}
+
+Phân bố số item trong mỗi giao dịch được trình bày ở Hình~\ref{fig:application-basket-size}. Các thống kê mô tả tương ứng được trình bày trong Bảng~\ref{tab:application-basket-size}.
+
+\begin{table}[H]
+\centering
+\caption{Thống kê kích thước giỏ hàng}
+\label{tab:application-basket-size}
+\begin{tabular}{lr}
+\toprule
+Thống kê & Giá trị \\
+\midrule
+Số giao dịch & 9,835 \\
+Trung bình & 4.4095 \\
+Độ lệch chuẩn & 3.5894 \\
+Nhỏ nhất & 1 \\
+Tứ phân vị 25\% & 2 \\
+Trung vị & 3 \\
+Tứ phân vị 75\% & 6 \\
+Lớn nhất & 32 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\appfigure{figures/mba_basket_size_distribution.png}{Phân bố số item trong mỗi giao dịch}{fig:application-basket-size}
+
+Kết quả cho thấy phần lớn giao dịch có số item tương đối nhỏ. Điều này giúp việc diễn giải các luật ngắn trở nên phù hợp hơn. Những giỏ hàng dài vẫn có thể chứa nhiều pattern thú vị, nhưng nếu luật chỉ xuất hiện trong các trường hợp hiếm thì khả năng triển khai rộng trong cửa hàng sẽ thấp.
+
+\subsection{Thiết lập khai thác frequent itemset và sinh luật kết hợp}
+\label{subsec:application-mining-setup}
+
+Trong notebook ứng dụng, mỗi item được ánh xạ sang một mã số nguyên để thuận tiện cho thuật toán khai thác. Sau đó, nhóm chạy quá trình khai thác frequent itemset và sinh luật kết hợp theo nhiều cặp ngưỡng \texttt{minsup} và \texttt{minconf}. Notebook ưu tiên sử dụng cài đặt PrePost/optimized của project thông qua Julia CLI; nếu môi trường không hỗ trợ, notebook có cơ chế fallback sang các phương án khác để bảo đảm vẫn chạy được. Trong lần chạy dùng cho báo cáo này, thuật toán thực tế được sử dụng là \textbf{Project PrePost/optimized qua Julia CLI}.
+
+Các ngưỡng thử nghiệm gồm:
+
+\begin{itemize}
+    \item \texttt{minsup} $\in \{0.020, 0.015, 0.010, 0.008, 0.005, 0.003\}$;
+    \item \texttt{minconf} $\in \{0.50, 0.40, 0.30, 0.25, 0.20, 0.15\}$.
+\end{itemize}
+
+Bảng~\ref{tab:application-threshold-grid} trình bày số lượng luật kết hợp sinh được theo từng cặp ngưỡng.
+
+\begin{table}[H]
+\centering
+\caption{Số lượng association rules theo từng cặp \texttt{minsup} và \texttt{minconf}}
+\label{tab:application-threshold-grid}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+\texttt{minsup} $\backslash$ \texttt{minconf} & 0.15 & 0.20 & 0.25 & 0.30 & 0.40 & 0.50 \\
+\midrule
+0.003 & 3,228 & 2,368 & 1,832 & 1,390 & 825 & 422 \\
+0.005 & 1,220 & 893 & 673 & 487 & 270 & 120 \\
+0.008 & 514 & 365 & 282 & 205 & 101 & 30 \\
+0.010 & 322 & 234 & 170 & 125 & 62 & 15 \\
+0.015 & 149 & 116 & 78 & 59 & 25 & 2 \\
+0.020 & 91 & 73 & 49 & 37 & 15 & 1 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Nhóm chọn cặp ngưỡng \texttt{minsup = 0.020} và \texttt{minconf = 0.40}. Với 9,835 giao dịch, \texttt{minsup = 0.020} tương đương ngưỡng hỗ trợ tuyệt đối là 197 giao dịch. Đây là cặp ngưỡng chặt nhất trong danh sách vẫn sinh đủ số luật để phân tích, đồng thời giữ support và confidence ở mức có thể diễn giải trong bối cảnh kinh doanh. Không chọn ngưỡng thấp hơn vì số lượng luật tăng nhanh, làm kết quả khó chọn lọc hơn và có nguy cơ chứa nhiều luật hiếm.
+
+Bảng~\ref{tab:application-selected-threshold} tóm tắt cấu hình cuối cùng.
+
+\begin{table}[H]
+\centering
+\caption{Cấu hình ngưỡng được chọn cho phần ứng dụng}
+\label{tab:application-selected-threshold}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr}
+\toprule
+Thuật toán thực tế được sử dụng & \texttt{minsup} & \texttt{minsup\_abs} & \texttt{minconf} & Frequent itemsets & Association rules \\
+\midrule
+Project PrePost/optimized qua Julia CLI & 0.020 & 197 & 0.40 & 122 & 15 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Kết quả frequent itemset tiêu biểu}
+\label{subsec:application-frequent-itemsets}
+
+Với cấu hình ngưỡng đã chọn, thuật toán sinh được 122 frequent itemset. Bảng~\ref{tab:application-frequent-itemsets} trình bày một số frequent itemset tiêu biểu, bao gồm các item đơn phổ biến nhất, một số cặp item và một số bộ ba item có support đạt ngưỡng.
+
+\begin{table}[H]
+\centering
+\caption{Một số frequent itemset tiêu biểu với \texttt{minsup = 0.020}}
+\label{tab:application-frequent-itemsets}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+Itemset & Kích thước & Support count & Support \\
+\midrule
+\texttt{whole milk} & 1 & 2,513 & 0.2555 \\
+\texttt{other vegetables} & 1 & 1,903 & 0.1935 \\
+\texttt{rolls/buns} & 1 & 1,809 & 0.1839 \\
+\texttt{soda} & 1 & 1,715 & 0.1744 \\
+\texttt{yogurt} & 1 & 1,372 & 0.1395 \\
+\texttt{bottled water} & 1 & 1,087 & 0.1105 \\
+\texttt{root vegetables} & 1 & 1,072 & 0.1090 \\
+\texttt{tropical fruit} & 1 & 1,032 & 0.1049 \\
+\texttt{shopping bags} & 1 & 969 & 0.0985 \\
+\texttt{sausage} & 1 & 924 & 0.0940 \\
+\texttt{other vegetables, whole milk} & 2 & 736 & 0.0748 \\
+\texttt{rolls/buns, whole milk} & 2 & 557 & 0.0566 \\
+\texttt{whole milk, yogurt} & 2 & 551 & 0.0560 \\
+\texttt{root vegetables, whole milk} & 2 & 481 & 0.0489 \\
+\texttt{other vegetables, root vegetables} & 2 & 466 & 0.0474 \\
+\texttt{other vegetables, yogurt} & 2 & 427 & 0.0434 \\
+\texttt{other vegetables, rolls/buns} & 2 & 419 & 0.0426 \\
+\texttt{tropical fruit, whole milk} & 2 & 416 & 0.0423 \\
+\texttt{soda, whole milk} & 2 & 394 & 0.0401 \\
+\texttt{rolls/buns, soda} & 2 & 377 & 0.0383 \\
+\texttt{other vegetables, root vegetables, whole milk} & 3 & 228 & 0.0232 \\
+\texttt{other vegetables, whole milk, yogurt} & 3 & 219 & 0.0223 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Các frequent itemset phổ biến nhất chủ yếu xoay quanh những sản phẩm thiết yếu như \texttt{whole milk}, \texttt{other vegetables}, \texttt{rolls/buns}, \texttt{yogurt} và \texttt{root vegetables}. Điều này phù hợp với kết quả khám phá dữ liệu ban đầu. Đáng chú ý, một số bộ ba như \texttt{other vegetables, root vegetables, whole milk} và \texttt{other vegetables, whole milk, yogurt} vẫn đạt support trên 2\%, cho thấy có các nhóm sản phẩm thường được mua cùng nhau chứ không chỉ các cặp item đơn giản.
+
+\subsection{Kết quả luật kết hợp}
+\label{subsec:application-association-rules}
+
+Từ các frequent itemset đã khai thác, nhóm sinh association rules và sắp xếp theo \texttt{lift}. Bảng~\ref{tab:application-top-rules} trình bày top 10 luật có lift cao nhất trong số các luật thỏa \texttt{minsup = 0.020} và \texttt{minconf = 0.40}.
+
+\begin{table}[H]
+\centering
+\caption{Top 10 luật kết hợp theo \texttt{lift}}
+\label{tab:application-top-rules}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrr}
+\toprule
+Antecedent & Consequent & Support & Count & Confidence & Lift & Conviction \\
+\midrule
+\texttt{root vegetables, whole milk} & \texttt{other vegetables} & 0.0232 & 228 & 0.4740 & 2.4498 & 1.5333 \\
+\texttt{root vegetables} & \texttt{other vegetables} & 0.0474 & 466 & 0.4347 & 2.2466 & 1.4267 \\
+\texttt{whipped/sour cream} & \texttt{other vegetables} & 0.0289 & 284 & 0.4028 & 2.0819 & 1.3506 \\
+\texttt{other vegetables, yogurt} & \texttt{whole milk} & 0.0223 & 219 & 0.5129 & 2.0072 & 1.5283 \\
+\texttt{butter} & \texttt{whole milk} & 0.0276 & 271 & 0.4972 & 1.9461 & 1.4808 \\
+\texttt{curd} & \texttt{whole milk} & 0.0261 & 257 & 0.4905 & 1.9195 & 1.4611 \\
+\texttt{other vegetables, root vegetables} & \texttt{whole milk} & 0.0232 & 228 & 0.4893 & 1.9148 & 1.4577 \\
+\texttt{domestic eggs} & \texttt{whole milk} & 0.0300 & 295 & 0.4728 & 1.8502 & 1.4120 \\
+\texttt{whipped/sour cream} & \texttt{whole milk} & 0.0322 & 317 & 0.4496 & 1.7598 & 1.3527 \\
+\texttt{root vegetables} & \texttt{whole milk} & 0.0489 & 481 & 0.4487 & 1.7560 & 1.3504 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Luật có lift cao nhất là \texttt{root vegetables, whole milk} $\Rightarrow$ \texttt{other vegetables}, với confidence bằng 0.4740 và lift bằng 2.4498. Điều này có nghĩa là trong các giao dịch có cả \texttt{root vegetables} và \texttt{whole milk}, có khoảng 47.40\% giao dịch cũng chứa \texttt{other vegetables}; đồng thời xác suất mua \texttt{other vegetables} trong nhóm này cao hơn khoảng 2.45 lần so với kỳ vọng ngẫu nhiên. Đây là một luật có ý nghĩa tốt để thử nghiệm gợi ý mua kèm.
+
+Luật \texttt{root vegetables} $\Rightarrow$ \texttt{other vegetables} cũng đáng chú ý vì có support count là 466 giao dịch và lift bằng 2.2466. So với luật đứng đầu, luật này có lift thấp hơn nhưng support cao hơn, nên có thể dễ áp dụng rộng hơn trong cửa hàng. Ngoài ra, các luật như \texttt{butter} $\Rightarrow$ \texttt{whole milk}, \texttt{curd} $\Rightarrow$ \texttt{whole milk}, \texttt{domestic eggs} $\Rightarrow$ \texttt{whole milk} đều phù hợp với trực giác tiêu dùng và có thể dùng trong các gợi ý theo nhóm sản phẩm bữa ăn hoặc thực phẩm hằng ngày.
+
+\subsection{Trực quan hóa luật kết hợp}
+\label{subsec:application-rule-visualization}
+
+Để dễ phân tích hơn, notebook tạo ba biểu đồ trực quan hóa luật kết hợp: heatmap theo lift, bubble chart giữa support và confidence, và biểu đồ cột so sánh lift.
+
+\appfigure{figures/mba_lift_heatmap.png}{Heatmap lift của top 10 luật kết hợp}{fig:application-lift-heatmap}
+
+Hình~\ref{fig:application-lift-heatmap} cho thấy các cặp antecedent--consequent có lift cao nhất. Các ô có lift lớn là ứng viên tốt để phân tích sâu hơn, nhưng cần lưu ý rằng heatmap không thể hiện trực tiếp số giao dịch hỗ trợ. Vì vậy, một luật có màu nổi bật vẫn cần được kiểm tra thêm bằng support count.
+
+\appfigure{figures/mba_rules_bubble.png}{Bubble chart: quan hệ giữa support, confidence và lift của top 10 luật}{fig:application-rules-bubble}
+
+Hình~\ref{fig:application-rules-bubble} biểu diễn mỗi luật bằng một điểm, trong đó trục hoành là support, trục tung là confidence, còn kích thước và màu sắc thể hiện lift. Biểu đồ này giúp nhận biết các luật cân bằng hơn giữa độ phổ biến và độ tin cậy. Những luật có lift cao nhưng support thấp nên được xem như ứng viên thử nghiệm nhỏ, thay vì triển khai rộng ngay lập tức.
+
+\appfigure{figures/mba_top_rules_lift.png}{So sánh lift của top 10 luật kết hợp}{fig:application-top-rules-lift}
+
+Hình~\ref{fig:application-top-rules-lift} giúp so sánh nhanh độ mạnh tương đối của các luật theo lift. Đường tham chiếu \texttt{lift = 1} thể hiện mức độc lập ngẫu nhiên. Tất cả top 10 luật đều có lift lớn hơn 1, cho thấy các quan hệ này là quan hệ mua kèm tích cực. Tuy nhiên, lift chỉ là một trong các tiêu chí; khi đưa vào ứng dụng thực tế, cần phối hợp thêm support, confidence, leverage và bối cảnh sản phẩm.
+
+\subsection{Diễn giải kinh doanh và đề xuất hành động}
+\label{subsec:application-business-interpretation}
+
+Từ top 10 luật, nhóm chọn ra một số nhóm hành động kinh doanh có thể triển khai. Bảng~\ref{tab:application-business-actions} tóm tắt các luật tiêu biểu, ý nghĩa và đề xuất hành động tương ứng.
+
+\begin{table}[H]
+\centering
+\caption{Diễn giải một số luật tiêu biểu và đề xuất hành động}
+\label{tab:application-business-actions}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{p{0.27\textwidth}p{0.24\textwidth}p{0.12\textwidth}p{0.31\textwidth}}
+\toprule
+Luật kết hợp & Ý nghĩa & Mức ưu tiên & Đề xuất hành động \\
+\midrule
+\texttt{root vegetables, whole milk} $\Rightarrow$ \texttt{other vegetables} & Khách mua rau củ gốc và sữa có xu hướng mua thêm nhóm rau khác; lift đạt 2.45. & Cao & Gợi ý \texttt{other vegetables} khi khách đã có \texttt{root vegetables} và \texttt{whole milk}; thử combo rau củ + sữa. \\
+\texttt{root vegetables} $\Rightarrow$ \texttt{other vegetables} & Luật có support count 466, phù hợp hơn để áp dụng rộng. & Cao & Đặt hai nhóm rau gần nhau; tạo gợi ý mua kèm trong khu vực rau củ. \\
+\texttt{whipped/sour cream} $\Rightarrow$ \texttt{other vegetables} & Quan hệ mua kèm mạnh với lift 2.08, nhưng support ở mức vừa. & Trung bình & Kiểm thử khuyến mãi nhỏ hoặc gợi ý theo công thức nấu ăn. \\
+\texttt{other vegetables, yogurt} $\Rightarrow$ \texttt{whole milk} & Confidence cao nhất trong top 10, đạt 51.29\%. & Cao & Gợi ý \texttt{whole milk} khi khách mua cả \texttt{other vegetables} và \texttt{yogurt}. \\
+\texttt{butter} $\Rightarrow$ \texttt{whole milk} & Quan hệ hợp lý về mặt tiêu dùng, lift 1.95 và confidence 49.72\%. & Trung bình & Tạo combo bơ + sữa hoặc gợi ý mua kèm tại quầy thực phẩm lạnh. \\
+\texttt{domestic eggs} $\Rightarrow$ \texttt{whole milk} & Cặp sản phẩm bữa sáng/thực phẩm hằng ngày, support count 295. & Trung bình & Thiết kế gợi ý theo bữa ăn; đặt gần khu thực phẩm thiết yếu. \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Các luật liên quan đến \texttt{root vegetables}, \texttt{other vegetables}, \texttt{whole milk} và \texttt{yogurt} là nhóm dễ diễn giải nhất vì chúng phản ánh hành vi mua các sản phẩm thực phẩm thiết yếu trong cùng giỏ hàng. Với các luật có support tương đối cao, cửa hàng có thể áp dụng ở mức rộng như bố trí kệ hoặc gợi ý mặc định. Với các luật có lift cao nhưng support thấp hơn, hướng phù hợp hơn là kiểm thử bằng khuyến mãi nhỏ hoặc gợi ý có điều kiện.
+
+Một điểm quan trọng là không nên chỉ chọn luật có lift cao nhất. Luật có lift cao có thể xuất hiện trong ít giao dịch, dẫn đến tác động kinh doanh hạn chế. Do đó, khi chọn luật để triển khai, nhóm đề xuất xem xét đồng thời ba yếu tố: lift lớn hơn 1, confidence đủ cao và support count đủ lớn. Ngoài ra, cần cân nhắc bối cảnh sản phẩm, mùa vụ, giá bán và khả năng bố trí thực tế trong cửa hàng.
+
+\subsection{Hạn chế của phần ứng dụng}
+\label{subsec:application-limitations}
+
+Mặc dù kết quả luật kết hợp có thể hỗ trợ ra quyết định, phần ứng dụng vẫn có một số hạn chế:
+
+\begin{itemize}
+    \item Dữ liệu chỉ cho biết item xuất hiện trong giao dịch, không có số lượng mua, giá trị hóa đơn, thời gian mua hàng hoặc thông tin khách hàng.
+    \item Association rules chỉ phản ánh quan hệ đồng xuất hiện, không chứng minh quan hệ nhân quả. Ví dụ, luật \texttt{butter} $\Rightarrow$ \texttt{whole milk} không có nghĩa là việc mua \texttt{butter} gây ra việc mua \texttt{whole milk}.
+    \item Kết quả phụ thuộc vào ngưỡng \texttt{minsup} và \texttt{minconf}. Khi thay đổi mục tiêu kinh doanh, ví dụ ưu tiên luật phổ biến hơn hoặc luật đặc thù hơn, cần thử lại các ngưỡng khác.
+    \item Một số luật có lift cao nhưng support không quá lớn, do đó cần được kiểm thử thực tế trước khi triển khai rộng.
+    \item Notebook mới dừng ở mức phân tích offline, chưa đo lường hiệu quả sau khi áp dụng các đề xuất như tăng doanh thu, tăng số item mỗi hóa đơn hoặc tăng tỉ lệ mua kèm.
+\end{itemize}
+
+\subsection{Kết luận chương}
+\label{subsec:application-conclusion}
+
+Chương này đã minh họa cách áp dụng thuật toán khai thác frequent itemset vào bài toán phân tích giỏ hàng. Từ dữ liệu \texttt{groceries.txt}, nhóm tiền xử lý được 9,835 giao dịch với 169 item khác nhau, sau đó sử dụng cài đặt PrePost/optimized qua Julia CLI để khai thác frequent itemset. Với ngưỡng \texttt{minsup = 0.020} và \texttt{minconf = 0.40}, thuật toán sinh được 122 frequent itemset và 15 association rules.
+
+Các kết quả cho thấy nhiều luật có ý nghĩa thực tế, đặc biệt là các luật xoay quanh nhóm sản phẩm \texttt{root vegetables}, \texttt{other vegetables}, \texttt{whole milk}, \texttt{yogurt}, \texttt{butter} và \texttt{domestic eggs}. Những luật này có thể được dùng để đề xuất bố trí sản phẩm, thiết kế combo hoặc xây dựng hệ thống gợi ý mua kèm. Tuy nhiên, khi triển khai trong môi trường thực tế, cần đánh giá đồng thời nhiều chỉ số và kiểm thử tác động kinh doanh thay vì chỉ dựa vào lift.
