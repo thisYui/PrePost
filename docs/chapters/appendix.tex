@@ -1,0 +1,101 @@
+\section{Phụ lục}
+
+\subsection{Mã nguồn và notebook thực nghiệm}
+
+Dự án gồm ba notebook chính được đặt trong thư mục \texttt{notebooks/}:
+
+\begin{itemize}
+    \item \texttt{manual\_example.ipynb}: minh họa từng bước hoạt động của thuật toán PrePost trên ví dụ nhỏ, bao gồm xây dựng PPC-tree, gán mã \texttt{pre}, mã \texttt{post}, tạo N-list và khai thác frequent itemsets.
+    
+    \item \texttt{experiment\_analysis.ipynb}: phân tích kết quả thực nghiệm ở Chương 4, đọc các file kết quả trong thư mục \texttt{results/}, tổng hợp thời gian chạy, số lượng frequent itemsets và trực quan hóa kết quả benchmark.
+    
+    \item \texttt{market\_basket\_analysis.ipynb}: minh họa ứng dụng PrePost vào bài toán Market Basket Analysis trên dữ liệu groceries. Notebook này thực hiện đọc dữ liệu, tiền xử lý giao dịch, khai thác frequent itemsets, sinh luật kết hợp, tính các chỉ số đánh giá và trực quan hóa kết quả.
+\end{itemize}
+
+Các hình ảnh sử dụng trong Chương 4 và Chương 5 được xuất tự động từ notebook \texttt{experiment\_analysis.ipynb} và \texttt{demo.ipynb} và lưu trong thư mục \texttt{figures/}.
+
+\subsection{Môi trường thực nghiệm}
+
+Các thí nghiệm trong báo cáo được thực hiện bằng ngôn ngữ Julia cho phần cài đặt thuật toán PrePost và Python cho phần phân tích dữ liệu, sinh luật kết hợp và trực quan hóa kết quả. Bộ công cụ SPMF được sử dụng làm chương trình tham chiếu để kiểm tra độ đúng của frequent itemsets, không được sử dụng trong quá trình cài đặt thuật toán PrePost.
+
+Các yêu cầu hệ thống chính gồm:
+
+\begin{itemize}
+    \item Julia phiên bản từ 1.9 trở lên.
+    \item Python phiên bản từ 3.9 trở lên.
+    \item Jupyter Notebook hoặc JupyterLab.
+    \item Java phiên bản từ 8 trở lên nếu cần chạy SPMF tham chiếu.
+    \item Các thư viện Python như \texttt{pandas}, \texttt{numpy}, \texttt{matplotlib}, \texttt{seaborn}, \texttt{mlxtend}.
+\end{itemize}
+
+\subsection{Cấu trúc thư mục}
+
+\begin{verbatim}
+PrePost/
+|
+|-- README.md
+|-- Project.toml
+|-- Manifest.toml
+|
+|-- src/
+|   |-- PrePostFIM.jl
+|   |-- cli.jl
+|   |-- algorithm/
+|   |-- structures/
+|   |-- utils/
+|
+|-- tests/
+|
+|-- data/
+|   |-- toy/
+|   |-- benchmark/
+|   |-- subsets/
+|   |-- synthetic/
+|   |-- application/
+|
+|-- notebooks/
+|   |-- manual_example.ipynb
+|   |-- experiment_analysis.ipynb
+|   |-- market_basket_analysis.ipynb
+|
+|-- outputs/
+|-- logs/
+|
+|-- docs/
+|   |-- Report.tex
+|   |-- references.bib
+|   |-- chapters/
+|   |-- figures/
+\end{verbatim}
+
+\subsection{Hướng dẫn tái lập kết quả}
+
+Quy trình chạy khuyến nghị như sau:
+
+\begin{enumerate}
+    \item Cài đặt dữ liệu và môi trường Julia.
+    \item Chạy bộ kiểm thử để kiểm tra project.
+    \item Chạy thuật toán hoặc benchmark vì notebook cần đọc kết quả từ thư mục \texttt{outputs/}
+    \item Mở Jupyter Notebook hoặc JupyterLab từ thư mục gốc project.
+    \item Chạy từng notebook theo thứ tự từ trên xuống dưới, trừ \texttt{manual\_example.ipynb} có thể chạy sau khi có datasets toy.
+\end{enumerate}
+
+Trên Windows, có thể chạy:
+
+\begin{verbatim}
+.\cmd\setup_datasets.ps1
+.\cmd\setup_julia_env.ps1
+.\cmd\run_all_experiments.ps1 -Spmf
+\end{verbatim}
+
+Trên Linux hoặc macOS, có thể chạy:
+
+\begin{verbatim}
+bash scripts/setup_datasets.sh
+bash scripts/setup_julia_env.sh
+bash scripts/run_all_experiments.sh -Spmf
+\end{verbatim}
+
+\subsection{Ghi chú về kết quả sinh tự động}
+
+Thư mục \texttt{outputs/}, chứa các file được sinh tự động trong quá trình chạy thuật toán, benchmark. Khi cần tái hiện toàn bộ kết quả, nên chạy lại các script từ đầu thay vì chỉnh sửa thủ công các file trong những thư mục này.

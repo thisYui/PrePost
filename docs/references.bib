@@ -1,6 +1,6 @@
 @inproceedings{agrawal1994fast,
   author    = {Agrawal, Rakesh and Srikant, Ramakrishnan},
-  title     = {Fast Algorithms for Mining Association Rules},
+  title     = {Fast Algorithms for Mining Association Rules in Large Databases},
   booktitle = {Proceedings of the 20th International Conference on Very Large Data Bases},
   pages     = {487--499},
   year      = {1994},
@@ -14,7 +14,18 @@
   pages     = {1--12},
   year      = {2000},
   publisher = {ACM},
-  doi       = {10.1145/342009.335372}
+  doi       = {10.1145/335191.335372}
+}
+
+@article{zaki2000eclat,
+  author  = {Zaki, Mohammed J.},
+  title   = {Scalable Algorithms for Association Mining},
+  journal = {IEEE Transactions on Knowledge and Data Engineering},
+  volume  = {12},
+  number  = {3},
+  pages   = {372--390},
+  year    = {2000},
+  doi     = {10.1109/69.846291}
 }
 
 @article{deng2012prepost,
@@ -28,9 +39,9 @@
   doi     = {10.1007/s11432-012-4638-z}
 }
 
-@article{deng2014prepostplus,
+@article{deng2015prepostplus,
   author  = {Deng, Zhi-Hong and Lv, Shou-Huan},
-  title   = {PrePost+: An Efficient N-lists-based Algorithm for Mining Frequent Itemsets via Children-Parent Equivalence Pruning},
+  title   = {PrePost+: An Efficient N-lists-based Algorithm for Mining Frequent Itemsets via Children--Parent Equivalence Pruning},
   journal = {Expert Systems with Applications},
   volume  = {42},
   number  = {13},
@@ -39,20 +50,9 @@
   doi     = {10.1016/j.eswa.2015.03.004}
 }
 
-@inproceedings{zaki2000eclat,
-  author    = {Zaki, Mohammed J.},
-  title     = {Scalable Algorithms for Association Mining},
-  booktitle = {IEEE Transactions on Knowledge and Data Engineering},
-  volume    = {12},
-  number    = {3},
-  pages     = {372--390},
-  year      = {2000},
-  doi       = {10.1109/69.846291}
-}
-
 @article{fournier2014spmf,
   author  = {Fournier-Viger, Philippe and Gomariz, Antonio and Gueniche, Ted and Soltani, Azadeh and Wu, Cheng-Wei and Tseng, Vincent S.},
-  title   = {SPMF: A Java Open-Source Pattern Mining Library},
+  title   = {{SPMF}: A Java Open-Source Pattern Mining Library},
   journal = {Journal of Machine Learning Research},
   volume  = {15},
   pages   = {3389--3393},
@@ -62,18 +62,16 @@
 
 @misc{spmfwebsite,
   author       = {Fournier-Viger, Philippe},
-  title        = {SPMF: An Open-Source Data Mining Library},
-  year         = {2026},
+  title        = {{SPMF}: An Open-Source Data Mining Library},
   howpublished = {\url{https://www.philippe-fournier-viger.com/spmf/}},
-  note         = {Accessed: 2026-01-01}
+  note         = {Accessed: 2026-06-22}
 }
 
 @misc{fimirepository,
-  author       = {{Frequent Itemset Mining Dataset Repository}},
-  title        = {FIMI Repository},
-  year         = {2026},
-  howpublished = {\url{http://fimi.uantwerpen.be/data/}},
-  note         = {Accessed: 2026-01-01}
+  author       = {{Frequent Itemset Mining Implementations Repository}},
+  title        = {{FIMI} Repository: Datasets},
+  howpublished = {\url{https://fimi.uantwerpen.be/data/}},
+  note         = {Accessed: 2026-06-22}
 }
 
 @book{han2011datamining,
@@ -82,4 +80,69 @@
   edition   = {3},
   publisher = {Morgan Kaufmann},
   year      = {2011}
+}
+
+@article{luna2019review,
+  author  = {Luna, Jos{\'e} Mar{\'i}a and Fournier-Viger, Philippe and Ventura, Sebasti{\'a}n},
+  title   = {Frequent Itemset Mining: A 25 Years Review},
+  journal = {WIREs Data Mining and Knowledge Discovery},
+  volume  = {9},
+  number  = {6},
+  pages   = {e1329},
+  year    = {2019},
+  doi     = {10.1002/widm.1329}
+}
+
+@inproceedings{goethals2004fimi,
+  author    = {Goethals, Bart and Zaki, Mohammed J.},
+  title     = {Advances in Frequent Itemset Mining Implementations: Report on {FIMI}'03},
+  booktitle = {ACM SIGKDD Explorations Newsletter},
+  volume    = {6},
+  number    = {1},
+  pages     = {109--117},
+  year      = {2004},
+  doi       = {10.1145/1007730.1007744}
+}
+
+@article{bezanson2017julia,
+  author  = {Bezanson, Jeff and Edelman, Alan and Karpinski, Stefan and Shah, Viral B.},
+  title   = {Julia: A Fresh Approach to Numerical Computing},
+  journal = {SIAM Review},
+  volume  = {59},
+  number  = {1},
+  pages   = {65--98},
+  year    = {2017},
+  doi     = {10.1137/141000671}
+}
+
+@article{hahsler2005arules,
+  author  = {Hahsler, Michael and Gr{\"u}n, Bettina and Hornik, Kurt},
+  title   = {{arules}: A Computational Environment for Mining Association Rules and Frequent Item Sets},
+  journal = {Journal of Statistical Software},
+  volume  = {14},
+  number  = {15},
+  pages   = {1--25},
+  year    = {2005},
+  doi     = {10.18637/jss.v014.i15}
+}
+
+@inproceedings{brin1997dynamic,
+  author    = {Brin, Sergey and Motwani, Rajeev and Ullman, Jeffrey D. and Tsur, Shalom},
+  title     = {Dynamic Itemset Counting and Implication Rules for Market Basket Data},
+  booktitle = {Proceedings of the 1997 ACM SIGMOD International Conference on Management of Data},
+  pages     = {255--264},
+  year      = {1997},
+  publisher = {ACM},
+  doi       = {10.1145/253260.253325}
+}
+
+@article{hahsler2008interest,
+  author  = {Hahsler, Michael and Hornik, Kurt},
+  title   = {New Probabilistic Interest Measures for Association Rules},
+  journal = {Intelligent Data Analysis},
+  volume  = {13},
+  number  = {4},
+  pages   = {615--633},
+  year    = {2009},
+  doi     = {10.3233/IDA-2009-0387}
 }

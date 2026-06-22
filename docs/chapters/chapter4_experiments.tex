@@ -1,281 +1,671 @@
-\section{Thực nghiệm và đánh giá}
-\label{sec:experiments}
+\section{Cài đặt thuật toán PrePost}
+\label{sec:implementation}
 
-Chương này trình bày quy trình thực nghiệm và đánh giá thuật toán PrePost đã cài đặt ở Chương 3. Mục tiêu của chương là kiểm tra tính đúng đắn của cài đặt, đánh giá thời gian chạy, số lượng frequent itemset sinh ra, mức sử dụng bộ nhớ, khả năng mở rộng khi tăng kích thước cơ sở dữ liệu và ảnh hưởng của độ dài giao dịch trung bình.
+Chương này trình bày quá trình cài đặt thuật toán PrePost bằng ngôn ngữ
+Julia~\cite{bezanson2017julia}. Mục tiêu là hiện thực các thành phần cốt lõi
+của thuật toán gốc~\cite{deng2012prepost}: đọc cơ sở dữ liệu giao dịch, tiền xử
+lý theo ngưỡng $\mathit{minsup}$, xây dựng PPC-tree, gán mã $pre/post$, tạo
+N-list, khai thác toàn bộ frequent itemset và xuất kết quả theo định dạng có
+thể đối chiếu với thư viện SPMF~\cite{fournier2014spmf,spmfwebsite}.
 
-Các kết quả được tổng hợp từ các file CSV trong thư mục \texttt{outputs/csv/} và các biểu đồ trong thư mục \texttt{outputs/figures/}. Khi cần so sánh với thuật toán chuẩn, nhóm sử dụng thuật toán \texttt{PrePost} trong thư viện SPMF. Đối với SPMF, ngưỡng \texttt{minsup} tuyệt đối được chuyển sang dạng phần trăm theo số lượng giao dịch để đảm bảo hai phía sử dụng cùng một ngưỡng hỗ trợ.
+Việc cài đặt được tổ chức theo bốn mức yêu cầu. Level 1 tập trung vào tính đúng đắn của thuật toán cơ bản. Level 2 bổ sung kiểm thử tự động trên nhiều CSDL nhỏ. Level 3 cài đặt một phiên bản tối ưu và đối chiếu với phiên bản cơ bản. Level 4 hoàn thiện phần đọc/ghi file và giao diện dòng lệnh.
 
-% Lệnh chèn hình có kiểm tra file tồn tại. Nếu chưa copy hình vào figures/, LaTeX vẫn biên dịch được.
-\providecommand{\expfigure}[3]{%
-\begin{figure}[H]
+\subsection{Môi trường và công cụ}
+\label{subsec:implementation-environment}
+
+Thuật toán được cài đặt bằng Julia, một ngôn ngữ hướng tới khả năng biểu đạt
+ở mức cao đồng thời hỗ trợ biên dịch chuyên biệt theo kiểu dữ liệu
+~\cite{bezanson2017julia}. Project sử dụng Julia từ phiên bản 1.9 trở lên và có
+module chính là \texttt{PrePostFIM}. Việc chạy chương trình, kiểm thử và đối
+chiếu kết quả được thực hiện thông qua các script dòng lệnh trên Windows
+PowerShell.
+
+Môi trường cài đặt được tóm tắt trong Bảng~\ref{tab:implementation-environment}.
+
+\begin{table}[H]
 \centering
-\IfFileExists{#1}{\includegraphics[width=0.88\textwidth]{#1}}{\fbox{\begin{minipage}{0.82\textwidth}\centering\vspace{0.8cm}Thiếu hình: \texttt{#1}\\Vui lòng copy hình từ notebook/outputs vào thư mục \texttt{figures/}.\vspace{0.8cm}\end{minipage}}}
-\caption{#2}
-\label{#3}
-\end{figure}
+\caption{Môi trường và công cụ cài đặt}
+\label{tab:implementation-environment}
+
+\begin{tabularx}{\textwidth}{
+    @{}
+    >{\raggedright\arraybackslash}p{0.28\textwidth}
+    >{\raggedright\arraybackslash}X
+    @{}
 }
-
-\subsection{Môi trường và tập dữ liệu thực nghiệm}
-\label{subsec:experiment-datasets}
-
-Nhóm thực nghiệm trên bốn tập dữ liệu benchmark phổ biến trong cộng đồng khai thác frequent itemset, gồm \texttt{chess}, \texttt{mushroom}, \texttt{retail} và \texttt{T10I4D100K}. Các tập dữ liệu này bao phủ cả trường hợp dữ liệu dày đặc, dữ liệu thưa và dữ liệu tổng hợp. Thông tin tổng quan được trình bày trong Bảng~\ref{tab:benchmark-datasets}.
-
-\begin{table}[H]
-\centering
-\caption{Các tập dữ liệu benchmark sử dụng trong thực nghiệm}
-\label{tab:benchmark-datasets}
-\begin{tabular}{lrrrl}
 \toprule
-Tập dữ liệu & Số giao dịch & Số item & Độ dài TB & Đặc điểm \\
+\textbf{Thành phần} & \textbf{Mô tả} \\
 \midrule
-\texttt{chess} & 3,196 & 75 & 37.0 & Dày đặc, itemset dài \\
-\texttt{mushroom} & 8,124 & 119 & 23.0 & Dày đặc, nhiều item \\
-\texttt{retail} & 88,162 & 16,470 & 10.3 & Thưa, dữ liệu thực tế \\
-\texttt{T10I4D100K} & 100,000 & 870 & 10.1 & Tổng hợp, thưa \\
+
+Ngôn ngữ lập trình
+& Julia \\
+
+Module chính
+& \texttt{PrePostFIM} \\
+
+Hệ điều hành kiểm thử
+& Windows, chạy qua PowerShell \\
+
+Định dạng input
+& SPMF, mỗi giao dịch là một dòng; các item được phân tách bằng khoảng trắng \\
+
+Định dạng output
+& SPMF, dạng \texttt{itemset \#SUP: support} \\
+
+Công cụ kiểm thử
+& Gói \texttt{Test} của Julia và các script PowerShell có phần mở rộng
+\texttt{.ps1} \\
+
+Script chính
+&
+\path{run_tests.ps1},
+\path{check_algorithms.ps1} và
+\path{run_optimization_check.ps1} \\
+
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-Mỗi tập dữ liệu được chạy với nhiều mức \texttt{minsup} khác nhau. Bảng~\ref{tab:minsup-settings} liệt kê các mức \texttt{minsup} được dùng trong thí nghiệm thời gian chạy và số lượng frequent itemset. Các mức này được chọn theo thứ tự giảm dần để quan sát sự thay đổi của runtime và output size khi điều kiện phổ biến được nới lỏng.
 
-\begin{table}[H]
-\centering
-\caption{Các mức \texttt{minsup} sử dụng cho từng tập dữ liệu}
-\label{tab:minsup-settings}
-\begin{tabular}{lp{0.72\textwidth}}
+Trong phạm vi chương này, các tập dữ liệu kiểm thử là các CSDL toy có kích thước nhỏ. Các tập này được dùng để kiểm tra tính đúng đắn của từng bước cài đặt và đối chiếu với kết quả mong đợi. Việc đánh giá trên các tập benchmark lớn và so sánh với SPMF được trình bày ở Chương thực nghiệm.
+
+\subsection{Tổ chức mã nguồn}
+\label{subsec:source-organization}
+
+Mã nguồn được chia thành nhiều file theo chức năng để giúp dễ kiểm thử và bảo trì. Module \texttt{PrePostFIM} đóng vai trò gom các thành phần con và export những hàm cần dùng ở bên ngoài. Cách tổ chức này giúp tách rõ bốn nhóm nhiệm vụ: biểu diễn dữ liệu, tiền xử lý, xây dựng cấu trúc PPC-tree/N-list và khai thác frequent itemset.
+
+Bảng~\ref{tab:source-files} mô tả vai trò của các file chính trong project.
+
+\begin{longtable}{
+    @{}
+    >{\RaggedRight\arraybackslash}p{0.34\textwidth}
+    >{\RaggedRight\arraybackslash}p{0.62\textwidth}
+    @{}
+}
+\caption{Tổ chức các file mã nguồn chính}
+\label{tab:source-files}\\
+
 \toprule
-Tập dữ liệu & Các mức \texttt{minsup} \\
+\textbf{File} & \textbf{Vai trò} \\
 \midrule
-\texttt{chess} & 2558, 2397, 2237, 2077, 1918, 1758 \\
-\texttt{mushroom} & 4062, 3656, 3249, 2843, 2437, 2031 \\
-\texttt{retail} & 1763, 1322, 882, 661, 441, 220 \\
-\texttt{T10I4D100K} & 2000, 1500, 1000, 750, 500, 250 \\
+\endfirsthead
+
+\multicolumn{2}{c}{%
+    \tablename\ \thetable{} -- tiếp theo
+} \\
+\toprule
+\textbf{File} & \textbf{Vai trò} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{2}{r}{Tiếp tục ở trang sau} \\
+\endfoot
+
 \bottomrule
-\end{tabular}
-\end{table}
+\endlastfoot
 
-Quy trình thực nghiệm được tự động hóa bằng script \texttt{run\_all\_experiments.ps1}. Script này chạy lần lượt các nhóm thí nghiệm \texttt{correctness}, \texttt{runtime\_minsup}, \texttt{output\_size}, \texttt{memory\_usage}, \texttt{scalability}, \texttt{transaction\_length} và \texttt{plot\_results}. Khi bật tùy chọn \texttt{-Spmf}, script đồng thời chạy SPMF để đối chiếu kết quả.
+\path{PrePostFIM.jl}
+&
+Module chính, include các file thành phần và export các kiểu dữ liệu,
+hàm đọc/ghi, hàm khai thác và hàm kiểm tra kết quả.
+\\
 
-\subsection{Kiểm tra tính đúng đắn}
-\label{subsec:experiment-correctness}
+\path{structures/transaction_db.jl}
+&
+Định nghĩa kiểu \texttt{TransactionDB} để lưu danh sách giao dịch
+và các hàm thống kê cơ bản như số giao dịch, số item và độ dài
+giao dịch trung bình.
+\\
 
-Mục tiêu của thí nghiệm correctness là kiểm tra xem cài đặt của nhóm có sinh đúng tập frequent itemset và support tương ứng hay không. Với mỗi tập dữ liệu, nhóm chọn một mức \texttt{minsup} đại diện, chạy cài đặt của nhóm và chạy SPMF với cùng ngưỡng hỗ trợ. Hai file output được chuẩn hóa về dạng ánh xạ từ itemset sang support rồi so sánh theo ba tiêu chí:
+\path{structures/ppc_tree.jl}
+&
+Định nghĩa \texttt{PPCNode}, \texttt{PPCTree}; thực hiện thao tác
+chèn giao dịch vào cây, gán mã $pre/post$ và thu thập node.
+\\
 
-\begin{itemize}
-    \item số lượng frequent itemset của cài đặt nhóm và của SPMF;
-    \item số lượng itemset xuất hiện ở cả hai output;
-    \item số lượng itemset có support khác nhau giữa hai output.
-\end{itemize}
+\path{structures/nlist.jl}
+&
+Định nghĩa \texttt{NListEntry}, tính support của N-list, tạo N-list
+cho item đơn và giao hai N-list.
+\\
 
-Kết quả correctness được trình bày trong Bảng~\ref{tab:correctness-results}. Tỉ lệ khớp được tính theo công thức:
+\path{utils/preprocessing.jl}
+&
+Đếm support của item đơn, lọc item không phổ biến, xác định thứ tự
+toàn cục và sắp xếp hoặc lọc giao dịch.
+\\
+
+\path{utils/io_spmf.jl}
+&
+Đọc CSDL theo định dạng SPMF và ghi kết quả frequent itemset theo
+định dạng SPMF.
+\\
+
+\path{utils/metrics.jl}
+&
+Đọc file output, chuẩn hóa kết quả và so sánh hai tập kết quả.
+\\
+
+\path{utils/timer.jl}
+&
+Đo thời gian chạy của một hàm.
+\\
+
+\path{algorithm/output.jl}
+&
+Chuẩn hóa thứ tự itemset và định dạng một dòng kết quả output.
+\\
+
+\path{algorithm/mining.jl}
+&
+Cài đặt thủ tục khai thác đệ quy từ các N-list ứng viên.
+\\
+
+\path{algorithm/prepost.jl}
+&
+Xây dựng pipeline chính của thuật toán, gồm
+\texttt{prepost\_basic}, \texttt{prepost\_optimized}
+và \texttt{prepost}.
+\\
+
+\path{src/cli.jl}
+&
+Giao diện dòng lệnh, nhận tham số input,
+$\mathit{minsup}$ và output.
+\\
+
+\end{longtable}
+
+Luồng include trong module chính được tổ chức theo thứ tự phụ thuộc: trước hết là các cấu trúc dữ liệu, sau đó là các tiện ích tiền xử lý/đọc ghi, cuối cùng là các file hiện thực thuật toán. Điều này giúp các hàm trong tầng thuật toán có thể sử dụng trực tiếp các kiểu dữ liệu và hàm tiện ích đã được định nghĩa trước.
+
+\subsection{Biểu diễn dữ liệu và cấu trúc chính}
+\label{subsec:data-structures}
+
+\subsubsection{Cơ sở dữ liệu giao dịch}
+
+CSDL giao dịch được biểu diễn bằng kiểu \texttt{TransactionDB}. Mỗi giao dịch là một vector các số nguyên, tương ứng với các item trong giao dịch. Toàn bộ CSDL là một vector các giao dịch:
+
+\begin{lstlisting}[caption={Biểu diễn CSDL giao dịch}, label={lst:transaction-db}]
+struct TransactionDB
+    transactions::Vector{Vector{Int}}
+end
+\end{lstlisting}
+
+Cách biểu diễn này phù hợp với dạng dữ liệu giao dịch thường được SPMF sử
+dụng, trong đó mỗi dòng biểu diễn một giao dịch và các item được mã hóa bằng số
+nguyên~\cite{fournier2014spmf,spmfwebsite}. Trước khi xây dựng PPC-tree, mỗi giao dịch được lọc bỏ các item không phổ biến, loại bỏ item lặp trong cùng giao dịch và sắp xếp theo thứ tự toàn cục.
+
+\subsubsection{PPC-tree}
+
+PPC-tree được cài đặt bằng hai kiểu dữ liệu chính là \texttt{PPCNode} và \texttt{PPCTree}. Mỗi node lưu item, số đếm, con trỏ đến cha, danh sách node con, mã $pre$ và mã $post$:
+
+\begin{lstlisting}[caption={Cấu trúc node trong PPC-tree}, label={lst:ppc-node}]
+mutable struct PPCNode
+    item::Union{Int,Nothing}
+    count::Int
+    parent::Union{PPCNode,Nothing}
+    children::Vector{PPCNode}
+    pre::Int
+    post::Int
+end
+\end{lstlisting}
+
+Node gốc có \texttt{item = nothing}. Khi chèn một giao dịch đã được sắp xếp, thuật toán đi từ gốc xuống theo thứ tự item trong giao dịch. Nếu node con mang item tương ứng đã tồn tại, trường \texttt{count} được tăng lên. Ngược lại, một node mới được tạo và thêm vào danh sách con.
+
+Sau khi toàn bộ giao dịch được chèn, cây được duyệt để gán mã $pre$ và
+$post$. Mã $pre$ được gán khi bắt đầu thăm node, còn mã $post$ được gán sau khi
+đã thăm toàn bộ các node con. Cặp mã này cho phép kiểm tra quan hệ tổ
+tiên--hậu duệ mà không cần duyệt lại đường đi trên cây
+~\cite{deng2012prepost}.
+
+\subsubsection{N-list}
+
+Một phần tử của N-list được biểu diễn bằng bộ ba $(pre, post, count)$:
+
+\begin{lstlisting}[caption={Biểu diễn phần tử N-list}, label={lst:nlist-entry}]
+struct NListEntry
+    pre::Int
+    post::Int
+    count::Int
+end
+\end{lstlisting}
+
+Support của một N-list được tính bằng tổng trường \texttt{count} của tất cả phần tử trong N-list:
 
 \begin{equation}
-    MatchRatio = \frac{\text{số itemset khớp với SPMF}}{\text{số itemset do SPMF sinh ra}} \times 100\%.
-    \label{eq:match-ratio}
+    sup(X) = \sum_{e \in NList(X)} e.count.
+    \label{eq:implementation-nlist-support}
 \end{equation}
 
+Để tạo N-list cho item đơn, chương trình duyệt các node của PPC-tree,
+gom những node có cùng item và sắp xếp các entry theo mã $pre$. Khi sinh N-list
+cho itemset mở rộng, chương trình kiểm tra quan hệ tổ tiên--hậu duệ giữa hai
+N-list. Với hai entry $x$ và $y$, điều kiện là:
+
+\begin{equation}
+    x.pre < y.pre
+    \quad\text{và}\quad
+    x.post > y.post.
+    \label{eq:implementation-ancestor-condition}
+\end{equation}
+
+Nếu điều kiện đúng thì node tương ứng với $x$ là tổ tiên của node tương ứng với
+$y$. Theo quy ước N-list được sử dụng trong project và ở Chương 2, entry kết quả
+giữ PP-code của node tổ tiên và nhận count từ node hậu duệ. Nếu nhiều entry hậu
+duệ ánh xạ vào cùng một PP-code tổ tiên, các giá trị count phải được cộng gộp.
+Cách tổ chức này phải được giữ nhất quán giữa hàm \texttt{join\_nlists}, thủ tục
+khai thác và phần minh họa thủ công~\cite{deng2012prepost}.
+
+\subsection{Quy trình cài đặt thuật toán PrePost}
+\label{subsec:prepost-pipeline}
+
+Pipeline chính của thuật toán được cài đặt trong hàm tạo danh sách ứng viên ban đầu và hai hàm khai thác \texttt{prepost\_basic}, \texttt{prepost\_optimized}. Các bước xử lý được tóm tắt trong Hình~\ref{fig:implementation-pipeline}.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.92\textwidth}
+\ttfamily\small
+Input SPMF\\
+\textbar\\
+\textbar-- Đọc TransactionDB\\
+\textbar-- Đếm support item đơn\\
+\textbar-- Lọc item có support $<$ minsup\\
+\textbar-- Sắp xếp item theo support giảm dần, phá hòa theo mã item tăng dần\\
+\textbar-- Lọc và sắp xếp lại từng giao dịch\\
+\textbar-- Xây dựng PPC-tree\\
+\textbar-- Gán mã pre và post\\
+\textbar-- Tạo N-list cho item đơn\\
+\textbar-- Khai thác frequent itemset bằng giao N-list\\
+\textbar-- Chuẩn hóa và ghi output SPMF
+\end{minipage}%
+}
+\caption{Pipeline cài đặt thuật toán PrePost}
+\label{fig:implementation-pipeline}
+\end{figure}
+
+Các bước tiền xử lý được cài đặt như sau:
+
+\begin{enumerate}
+    \item Quét CSDL để đếm support của từng item đơn. Nếu một item xuất hiện nhiều lần trong cùng một giao dịch thì chỉ được tính một lần.
+    \item Lọc bỏ các item có support nhỏ hơn $\mathit{minsup}$.
+    \item Xác định thứ tự toàn cục. Item có support cao hơn đứng trước. Nếu hai item có cùng support, item có mã nhỏ hơn đứng trước.
+    \item Với từng giao dịch, loại bỏ item không phổ biến, loại bỏ item trùng lặp và sắp xếp theo thứ tự toàn cục.
+\end{enumerate}
+
+Sau bước tiền xử lý, các giao dịch được chèn vào PPC-tree. Từ PPC-tree đã
+gán mã $pre/post$, chương trình xây dựng N-list của các item đơn và khai thác
+frequent itemset theo chiều sâu, phù hợp với quy trình tổng quát của PrePost
+~\cite{deng2012prepost}.
+
+\subsection{Phiên bản cơ bản và phiên bản tối ưu}
+\label{subsec:basic-optimized}
+
+Project duy trì hai phiên bản có cùng pipeline và cùng quy tắc sinh
+frequent itemset:
+
+\begin{itemize}
+    \item \texttt{prepost\_basic}: tạo các N-list ứng viên của một bước mở rộng,
+          lưu chúng vào danh sách trung gian, sau đó mới duyệt danh sách để tính
+          support và loại các ứng viên không đạt $\mathit{minsup}$;
+    \item \texttt{prepost\_optimized}: tính support ngay sau từng phép giao
+          N-list. Ứng viên không đạt $\mathit{minsup}$ bị loại trước khi được
+          thêm vào danh sách trung gian hoặc danh sách mở rộng tiếp theo.
+\end{itemize}
+
+Hai phiên bản đều phải loại itemset không phổ biến trước khi tiếp tục đệ quy;
+nếu không, việc mở rộng các nhánh đó vừa không cần thiết vừa trái với mục tiêu
+tỉa dựa trên tính phản đơn điệu của support. Vì vậy, khác biệt được đánh giá ở
+đây không phải là ``bản cơ bản giữ lại itemset không phổ biến'', mà là thời điểm
+kiểm tra support và việc có hay không vật hóa N-list không đạt ngưỡng trong
+danh sách trung gian.
+
+Đây là một tối ưu cục bộ, tương đối đơn giản nhưng đáng kiểm tra vì nó có thể
+giảm số đối tượng N-list tạm thời và số ứng viên phải duyệt lại. Nhóm chủ động
+không kết hợp đồng thời với các kỹ thuật khác để có thể quy thay đổi quan sát
+được cho đúng một yếu tố cài đặt.
+
+Về mặt kết quả, hai phiên bản phải sinh ra cùng một tập frequent itemset. Do đó, phiên bản cơ bản được dùng như một đối chứng nội bộ để kiểm tra phiên bản tối ưu. Trong mã nguồn, hàm \texttt{prepost} mặc định gọi phiên bản tối ưu:
+
+\begin{lstlisting}[caption={Hàm PrePost mặc định}, label={lst:prepost-default}]
+prepost(db::TransactionDB, minsup::Int)::Vector{Tuple{Vector{Int},Int}} =
+    prepost_optimized(db, minsup)
+\end{lstlisting}
+
+Thủ tục khai thác đệ quy của phiên bản tối ưu có thể mô tả bằng giả mã trong Thuật toán~\ref{alg:implementation-mining}.
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.92\textwidth}
+\ttfamily\small
+Mine(prefix, suffixCandidates, minsup)\\
+\quad for each candidate $(item, nlist)$ in suffixCandidates do\\
+\quad\quad supp $\leftarrow$ support(nlist)\\
+\quad\quad if supp $<$ \mathit{minsup} then continue\\
+\quad\quad newPrefix $\leftarrow$ prefix $\cup \{item\}$\\
+\quad\quad output $(newPrefix, supp)$\\
+\quad\quad nextCandidates $\leftarrow \emptyset$\\
+\quad\quad for each later candidate $(nextItem, nextNList)$ do\\
+\quad\quad\quad joined $\leftarrow$ join\_nlists(nlist, nextNList)\\
+\quad\quad\quad if support(joined) $\geq$ \mathit{minsup} then\\
+\quad\quad\quad\quad add $(nextItem, joined)$ to nextCandidates\\
+\quad\quad if nextCandidates is not empty then\\
+\quad\quad\quad Mine(newPrefix, nextCandidates, minsup)
+\end{minipage}%
+}
+\caption{Giả mã khai thác đệ quy bằng N-list trong phiên bản tối ưu}
+\label{alg:implementation-mining}
+\end{figure}
+
+Kỹ thuật tỉa sớm không làm thay đổi tập kết quả vì mọi itemset có support
+nhỏ hơn $\mathit{minsup}$ đều không phổ biến; theo tính phản đơn điệu của
+support, mọi tập cha của nó cũng không thể phổ biến
+~\cite{agrawal1994fast,han2011datamining}. Tối ưu chỉ thay đổi thời điểm loại
+ứng viên và lượng dữ liệu trung gian được lưu.
+
+\subsection{Xử lý đầu vào, đầu ra và giao diện dòng lệnh}
+\label{subsec:io-cli}
+
+Chương trình hỗ trợ định dạng giao dịch tương thích với các thuật toán FIM
+trong SPMF: mỗi dòng là một giao dịch và các item được phân tách bằng khoảng
+trắng~\cite{fournier2014spmf,spmfwebsite}. Riêng bộ đọc của project còn bỏ qua
+dòng rỗng và xem phần sau ký tự \texttt{\#} là chú thích. Đây là quy ước của
+trình đọc do nhóm cài đặt, không phải yêu cầu chung cho mọi file dữ liệu SPMF.
+
+Ví dụ một file input hợp lệ:
+
+\begin{lstlisting}[caption={Ví dụ input theo định dạng SPMF}, label={lst:spmf-input}]
+1 2 3
+1 3 4
+2 3 5
+1 2 3 5
+2 3 4
+\end{lstlisting}
+
+Kết quả output được ghi theo định dạng:
+
+\begin{lstlisting}[caption={Ví dụ output theo định dạng SPMF}, label={lst:spmf-output}]
+1 #SUP: 3
+2 #SUP: 4
+3 #SUP: 5
+1 2 #SUP: 2
+\end{lstlisting}
+
+Trước khi ghi output, các kết quả được chuẩn hóa. Mỗi itemset được sắp xếp tăng dần theo mã item. Toàn bộ danh sách kết quả được sắp xếp theo kích thước itemset tăng dần; nếu hai itemset có cùng kích thước thì sắp xếp theo thứ tự từ điển. Việc chuẩn hóa này giúp so sánh kết quả ổn định và không phụ thuộc vào thứ tự sinh ra trong quá trình đệ quy.
+
+Giao diện dòng lệnh được cài đặt trong file \texttt{src/cli.jl}. Chương trình nhận ba tham số bắt buộc: đường dẫn input, ngưỡng $\mathit{minsup}$ và đường dẫn output. Cú pháp chạy như sau:
+
+\begin{lstlisting}[caption={Cú pháp chạy chương trình}, label={lst:cli-usage}]
+julia --project=. src/cli.jl --input <path> --minsup <integer> --output <path>
+\end{lstlisting}
+
+Ví dụ chạy trên CSDL toy cơ sở:
+
+\begin{lstlisting}[caption={Ví dụ chạy chương trình trên CSDL toy}, label={lst:cli-example}]
+julia --project=. src/cli.jl \
+    --input data/toy/example_basic.txt \
+    --minsup 2 \
+    --output outputs/toy/output_basic.out
+\end{lstlisting}
+
+Sau khi chạy, chương trình in ra thông tin input, output, $\mathit{minsup}$, số lượng frequent itemset và thời gian chạy. Điều này giúp thuận tiện cho việc ghi log thực nghiệm.
+
+\subsection{Kiểm thử Level 1 và Level 2}
+\label{subsec:level1-level2-tests}
+
+\subsubsection{Mục tiêu kiểm thử}
+
+Mục tiêu kiểm thử là đảm bảo từng thành phần riêng lẻ và toàn bộ pipeline PrePost hoạt động đúng. Các test bao gồm:
+
+\begin{itemize}
+    \item kiểm tra đọc file SPMF;
+    \item kiểm tra đếm support item đơn;
+    \item kiểm tra lọc item không phổ biến và sắp xếp giao dịch;
+    \item kiểm tra xây dựng PPC-tree;
+    \item kiểm tra gán mã $pre$ và $post$;
+    \item kiểm tra tạo và giao N-list;
+    \item kiểm tra kết quả frequent itemset cuối cùng;
+    \item kiểm tra chuẩn hóa, ghi và đọc output.
+\end{itemize}
+
+Kết quả chạy unit test mới nhất được ghi nhận như sau:
+
+\begin{lstlisting}[caption={Kết quả chạy unit test}, label={lst:unit-test-log}]
+Running Julia tests...
+Starting PrePostFIM test suite...
+Test Summary: | Pass  Total  Time
+PrePostFIM    |  103    103  3.9s
+Finished PrePostFIM test suite.
+\end{lstlisting}
+
+Như vậy, toàn bộ 103 test đều vượt qua.
+
+\subsubsection{Bộ dữ liệu kiểm thử Level 2}
+
+Để đáp ứng yêu cầu Level 2, nhóm sử dụng năm CSDL toy khác nhau. Hai CSDL đầu là hai ví dụ minh họa tay ở Chương 2. Ba CSDL còn lại được thiết kế để kiểm tra các tình huống khác nhau: dữ liệu thưa, dữ liệu có item không phổ biến và dữ liệu có giao dịch trùng với itemset dài.
+
+Bảng~\ref{tab:level2-datasets} trình bày bộ dữ liệu kiểm thử Level 2.
+
 \begin{table}[H]
 \centering
-\caption{Kết quả kiểm tra correctness so với SPMF}
-\label{tab:correctness-results}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrrr}
-\toprule
-Tập dữ liệu & \texttt{minsup} & Nhóm & SPMF & Khớp & Thiếu ở nhóm & Sai support & Tỉ lệ khớp \\
-\midrule
-\texttt{chess} & 2077 & 111,778 & 111,778 & 111,778 & 0 & 0 & 100\% \\
-\texttt{mushroom} & 2437 & 2,735 & 2,735 & 2,735 & 0 & 0 & 100\% \\
-\texttt{retail} & 661 & 277 & 277 & 277 & 0 & 0 & 100\% \\
-\texttt{T10I4D100K} & 750 & 561 & 561 & 561 & 0 & 0 & 100\% \\
-\bottomrule
-\end{tabular}%
+\caption{Năm CSDL toy dùng cho kiểm thử Level 2}
+\label{tab:level2-datasets}
+
+\begin{tabularx}{\textwidth}{
+    @{}
+    >{\raggedright\arraybackslash}p{0.38\textwidth}
+    >{\raggedright\arraybackslash}X
+    >{\centering\arraybackslash}p{0.10\textwidth}
+    >{\centering\arraybackslash}p{0.08\textwidth}
+    @{}
 }
+\toprule
+\textbf{Dataset}
+& \textbf{Mục đích kiểm thử}
+& $\boldsymbol{\mathit{minsup}}$
+& \textbf{Số FI} \\
+\midrule
+
+\path{example_basic.txt}
+& Ví dụ cơ sở ở Chương 2
+& 2
+& 13 \\
+
+\path{example_special_single_path.txt}
+& Trường hợp PPC-tree một nhánh
+& 2
+& 15 \\
+
+\path{example_sparse.txt}
+& Dữ liệu thưa, ít itemset dài
+& 2
+& 5 \\
+
+\path{example_with_infrequent_items.txt}
+& Có item không phổ biến cần bị loại
+& 2
+& 6 \\
+
+\path{example_duplicates_long.txt}
+& Có giao dịch trùng và itemset dài
+& 2
+& 15 \\
+
+\bottomrule
+\end{tabularx}
 \end{table}
 
-Kết quả cho thấy cài đặt của nhóm khớp hoàn toàn với SPMF trên cả bốn tập dữ liệu được kiểm thử: số lượng itemset bằng nhau, không có itemset bị thiếu, không có itemset thừa và không có sai lệch support. Điều này xác nhận rằng các bước chính của thuật toán, gồm tiền xử lý theo \texttt{minsup}, xây dựng PPC-tree, gán mã \texttt{pre}/\texttt{post}, tạo N-list và khai thác đệ quy, đã được cài đặt đúng.
+Mỗi dataset có một file expected output tương ứng trong thư mục \texttt{data/toy/expected}. Script \texttt{check\_algorithms.ps1} chạy chương trình trên năm dataset, chuẩn hóa output rồi so sánh với expected output.
 
-Về mặt lý thuyết, việc khớp support là đặc biệt quan trọng. Trong PrePost, support của một itemset được tính từ N-list thay vì quét lại cơ sở dữ liệu. Nếu điều kiện tổ tiên--hậu duệ dựa trên mã \texttt{pre}/\texttt{post} hoặc phép giao N-list bị sai, support sẽ lệch so với SPMF. Kết quả ở Bảng~\ref{tab:correctness-results} cho thấy biểu diễn N-list và thao tác giao của nhóm là nhất quán với công cụ tham chiếu.
-
-\subsection{Thời gian chạy theo \texttt{minsup}}
-\label{subsec:experiment-runtime}
-
-Thí nghiệm thời gian chạy đánh giá runtime khi giảm dần \texttt{minsup}. Với mỗi tập dữ liệu, nhóm chạy ít nhất sáu mức \texttt{minsup} khác nhau và so sánh đường cong runtime của cài đặt nhóm với SPMF. Các biểu đồ runtime được trình bày trong Hình~\ref{fig:runtime-chess} đến Hình~\ref{fig:runtime-t10}.
-
-\expfigure{figures/runtime_chess.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{chess}}{fig:runtime-chess}
-\expfigure{figures/runtime_mushroom.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{mushroom}}{fig:runtime-mushroom}
-\expfigure{figures/runtime_retail.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{retail}}{fig:runtime-retail}
-\expfigure{figures/runtime_T10I4D100K.png}{Thời gian chạy theo \texttt{minsup} trên tập \texttt{T10I4D100K}}{fig:runtime-t10}
-
-Kết quả cho thấy khi \texttt{minsup} giảm, runtime thường có xu hướng tăng. Nguyên nhân xuất phát từ tính chất anti-monotone của support đã trình bày ở Chương 1: khi ngưỡng \texttt{minsup} thấp hơn, nhiều itemset hơn thỏa điều kiện phổ biến, làm số lượng N-list trung gian và số nhánh tìm kiếm tăng lên. Do đó, thuật toán phải thực hiện nhiều phép giao N-list và ghi nhiều kết quả hơn.
-
-Xu hướng này thể hiện rõ trên tập \texttt{chess}. Đây là tập dữ liệu dày đặc, độ dài giao dịch trung bình cao, nên các item thường đồng xuất hiện với nhau. Khi \texttt{minsup} giảm, số lượng tổ hợp itemset dài tăng nhanh, kéo theo runtime tăng mạnh. Ngược lại, \texttt{retail} và \texttt{T10I4D100K} là các tập thưa hơn; mặc dù số giao dịch lớn, mỗi giao dịch ngắn hơn nên số tổ hợp frequent itemset tại cùng ngưỡng tương đối thường nhỏ hơn.
-
-So với SPMF, cài đặt của nhóm có ưu điểm là đường cong runtime phản ánh đúng xu hướng lý thuyết và kết quả sinh ra khớp với SPMF. Tuy nhiên, SPMF là thư viện đã được tối ưu lâu năm, do đó thường ổn định hơn về quản lý bộ nhớ, thao tác trên cấu trúc dữ liệu và chi phí I/O. Cài đặt của nhóm vẫn có thể bị ảnh hưởng bởi chi phí cấp phát N-list mới và ghi toàn bộ output ra file, đặc biệt ở các cấu hình có output size lớn.
-
-\subsection{Số lượng frequent itemset theo \texttt{minsup}}
-\label{subsec:experiment-output-size}
-
-Thí nghiệm output size ghi nhận số lượng frequent itemset sinh ra theo từng mức \texttt{minsup}. Đây là chỉ số quan trọng vì runtime và bộ nhớ của thuật toán FIM thường phụ thuộc mạnh vào kích thước output. Các biểu đồ output size được trình bày trong Hình~\ref{fig:output-size-chess} đến Hình~\ref{fig:output-size-t10}.
-
-\expfigure{figures/output_size_chess.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{chess}}{fig:output-size-chess}
-\expfigure{figures/output_size_mushroom.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{mushroom}}{fig:output-size-mushroom}
-\expfigure{figures/output_size_retail.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{retail}}{fig:output-size-retail}
-\expfigure{figures/output_size_T10I4D100K.png}{Số lượng frequent itemset theo \texttt{minsup} trên tập \texttt{T10I4D100K}}{fig:output-size-t10}
-
-Theo định nghĩa frequent itemset, một itemset $X$ được giữ lại nếu $sup(X) \geq minsup$. Khi \texttt{minsup} giảm, điều kiện này trở nên dễ thỏa hơn, vì vậy tập kết quả chỉ có thể giữ nguyên hoặc tăng lên. Điều này giải thích xu hướng output size tăng khi \texttt{minsup} giảm.
-
-Trên tập \texttt{chess}, output size tăng rất nhanh do đây là dữ liệu dense và có độ dài giao dịch trung bình lớn. Nhiều item cùng xuất hiện trong một giao dịch, làm số lượng tổ hợp itemset thỏa \texttt{minsup} tăng mạnh. Trên tập \texttt{retail}, dữ liệu thưa hơn nên số lượng frequent itemset tăng chậm hơn. Kết quả này phù hợp với lý thuyết ở Chương 1: không gian tìm kiếm có kích thước lũy thừa theo số item, nhưng tính chất Apriori cho phép tỉa mạnh hơn khi dữ liệu thưa hoặc \texttt{minsup} cao.
-
-Về so sánh với SPMF, output size của nhóm trùng với SPMF ở các cấu hình đã đối chiếu, cho thấy cài đặt không bỏ sót itemset và không sinh itemset không phổ biến. Điểm yếu còn lại không nằm ở độ đúng của output mà nằm ở chi phí xử lý khi output size rất lớn, vì việc lưu và ghi toàn bộ itemset có thể trở thành nút thắt cổ chai.
-
-\subsection{Sử dụng bộ nhớ}
-\label{subsec:experiment-memory}
-
-Thí nghiệm bộ nhớ được thực hiện tại một mức \texttt{minsup} trung bình cho mỗi tập dữ liệu. Nhóm so sánh phiên bản \texttt{basic} và \texttt{optimized}. Trong môi trường đo hiện tại, peak RSS không được lấy trực tiếp trong tiến trình Julia; vì vậy, báo cáo sử dụng lượng bộ nhớ cấp phát của Julia (\texttt{allocated\_bytes}) như một chỉ báo để so sánh tương đối giữa hai phiên bản. Kết quả chi tiết được trình bày trong Bảng~\ref{tab:memory-results} và Hình~\ref{fig:memory-usage}.
+Kết quả kiểm tra thuật toán được tóm tắt trong Bảng~\ref{tab:algorithm-check-results}.
 
 \begin{table}[H]
 \centering
-\caption{Bộ nhớ cấp phát của phiên bản basic và optimized}
-\label{tab:memory-results}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llrrrr}
+\caption{Kết quả kiểm tra thuật toán trên năm CSDL toy}
+\label{tab:algorithm-check-results}
+\begin{tabular}{lccc}
 \toprule
-Tập dữ liệu & Phiên bản & \texttt{minsup} & Số itemset & Thời gian (s) & Bộ nhớ cấp phát (MB) \\
+Dataset & $\mathit{minsup}$ & Số FI sinh ra & Kết quả so sánh \\
 \midrule
-\texttt{chess} & basic & 2077 & 111,778 & 4.916 & 6036.02 \\
-\texttt{chess} & optimized & 2077 & 111,778 & 3.466 & 5963.33 \\
-\texttt{mushroom} & basic & 2437 & 2,735 & 0.048 & 88.88 \\
-\texttt{mushroom} & optimized & 2437 & 2,735 & 0.040 & 88.28 \\
-\texttt{retail} & basic & 661 & 277 & 0.730 & 159.43 \\
-\texttt{retail} & optimized & 661 & 277 & 0.746 & 158.97 \\
-\texttt{T10I4D100K} & basic & 750 & 561 & 55.998 & 965.09 \\
-\texttt{T10I4D100K} & optimized & 750 & 561 & 56.192 & 961.06 \\
-\bottomrule
-\end{tabular}%
-}
-\end{table}
-
-\expfigure{figures/memory_usage.png}{So sánh bộ nhớ giữa bản basic và optimized}{fig:memory-usage}
-
-Kết quả cho thấy phiên bản optimized nhìn chung giảm nhẹ lượng bộ nhớ cấp phát so với phiên bản basic. Mức giảm này rõ nhất về mặt tuyệt đối trên \texttt{chess}, do tập dữ liệu dense sinh nhiều itemset và nhiều cấu trúc trung gian hơn. Trên \texttt{retail} và \texttt{T10I4D100K}, bộ nhớ giữa hai phiên bản gần tương đương, cho thấy chi phí chính có thể nằm ở việc lưu dữ liệu đầu vào, PPC-tree, N-list cơ sở và output thay vì chỉ ở số lượng ứng viên bị tỉa muộn.
-
-Về lý thuyết, bộ nhớ của PrePost phụ thuộc vào số node trong PPC-tree, số entry trong N-list và số itemset trung gian được sinh ra trong quá trình khai thác. Phiên bản optimized tỉa sớm các itemset không đạt \texttt{minsup}, do đó có thể giảm số cấu trúc trung gian được truyền xuống các bước đệ quy. Tuy nhiên, khi output thật sự không quá lớn hoặc chi phí lưu cấu trúc nền chiếm ưu thế, mức giảm bộ nhớ có thể không quá lớn.
-
-\subsection{Khả năng mở rộng}
-\label{subsec:experiment-scalability}
-
-Thí nghiệm scalability được thực hiện trên tập \texttt{retail}. Nhóm tạo các tập con có kích thước xấp xỉ 10\%, 25\%, 50\%, 75\% và 100\% số giao dịch. Tỉ lệ \texttt{minsup} được giữ ở mức 0.5\% để so sánh công bằng khi kích thước cơ sở dữ liệu tăng. Kết quả được trình bày trong Bảng~\ref{tab:scalability-results} và Hình~\ref{fig:scalability}.
-
-\begin{table}[H]
-\centering
-\caption{Kết quả scalability trên tập \texttt{retail}}
-\label{tab:scalability-results}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrr}
-\toprule
-Phiên bản & Tỉ lệ subset & Số giao dịch & \texttt{minsup} & Số itemset & Thời gian (ms) & Trạng thái \\
-\midrule
-optimized & 10\% & 8,816 & 44 & 718 & 454.00 & OK \\
-SPMF & 10\% & 8,816 & 44 & 718 & 410.85 & OK \\
-optimized & 25\% & 22,040 & 110 & 672 & 389.00 & OK \\
-SPMF & 25\% & 22,040 & 110 & 672 & 466.40 & OK \\
-optimized & 50\% & 44,081 & 220 & 617 & 843.00 & OK \\
-SPMF & 50\% & 44,081 & 220 & 617 & 567.85 & OK \\
-optimized & 75\% & 66,122 & 331 & 544 & 1,386.00 & OK \\
-SPMF & 75\% & 66,122 & 331 & 544 & 662.44 & OK \\
-optimized & 100\% & 88,162 & 441 & 580 & 2,580.00 & OK \\
-SPMF & 100\% & 88,162 & 441 & 580 & 752.16 & OK \\
-\bottomrule
-\end{tabular}%
-}
-\end{table}
-
-\expfigure{figures/scalability.png}{Thời gian chạy theo kích thước cơ sở dữ liệu trên tập \texttt{retail}}{fig:scalability}
-
-Khi tăng kích thước từ 10\% lên 100\%, số giao dịch tăng 10 lần, trong khi runtime của phiên bản optimized tăng khoảng 5.68 lần. Điều này cho thấy trên tập \texttt{retail} với tỉ lệ \texttt{minsup} cố định, runtime tăng dưới tuyến tính theo số giao dịch trong cấu hình đo được. Một nguyên nhân là \texttt{minsup} tuyệt đối cũng tăng theo kích thước dữ liệu, giúp tỉa bớt các itemset ít xuất hiện và làm output size không tăng đơn điệu theo số giao dịch.
-
-So với SPMF, cài đặt của nhóm cho kết quả output size giống nhau ở từng subset, nhưng runtime ở các mức 50\%, 75\% và 100\% cao hơn SPMF. Điều này phản ánh điểm mạnh của SPMF về tối ưu cài đặt, đặc biệt trong quản lý bộ nhớ, thao tác trên cấu trúc dữ liệu và chi phí I/O. Tuy nhiên, cài đặt của nhóm vẫn mở rộng được đến toàn bộ tập \texttt{retail} và thể hiện xu hướng tăng runtime hợp lý khi kích thước dữ liệu tăng.
-
-\subsection{Ảnh hưởng của độ dài giao dịch trung bình}
-\label{subsec:experiment-transaction-length}
-
-Để đánh giá ảnh hưởng của độ dài giao dịch trung bình, nhóm tạo các cơ sở dữ liệu tổng hợp gồm 10,000 giao dịch, 1,000 item và tỉ lệ \texttt{minsup} bằng 1\%. Độ dài giao dịch trung bình lần lượt là 5, 10, 20, 40 và 80. Kết quả được trình bày trong Bảng~\ref{tab:transaction-length-results} và Hình~\ref{fig:transaction-length}.
-
-\begin{table}[H]
-\centering
-\caption{Ảnh hưởng của độ dài giao dịch trung bình trên dữ liệu tổng hợp}
-\label{tab:transaction-length-results}
-\begin{tabular}{rrrrr}
-\toprule
-Độ dài TB & Số giao dịch & \texttt{minsup} & Số itemset & Thời gian (ms) \\
-\midrule
-5 & 10,000 & 100 & 0 & 2.00 \\
-10 & 10,000 & 100 & 514 & 731.00 \\
-20 & 10,000 & 100 & 1,000 & 8,290.00 \\
-40 & 10,000 & 100 & 1,000 & 28,988.00 \\
-80 & 10,000 & 100 & 499,673 & 1,743,193.00 \\
+Basic & 2 & 13 & Passed \\
+Special single-path & 2 & 15 & Passed \\
+Sparse & 2 & 5 & Passed \\
+Infrequent-items & 2 & 6 & Passed \\
+Duplicates-long & 2 & 15 & Passed \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\expfigure{figures/transaction_length.png}{Ảnh hưởng của độ dài giao dịch trung bình đến runtime và output size}{fig:transaction-length}
+Log thực thi của script kiểm tra thuật toán cho thấy cả năm dataset đều khớp expected output:
 
-Kết quả cho thấy độ dài giao dịch trung bình ảnh hưởng rất mạnh đến thuật toán FIM. Khi giao dịch dài hơn, số tổ hợp item tiềm năng trong mỗi giao dịch tăng nhanh. Về mặt tổ hợp, một giao dịch có độ dài $\ell$ có thể chứa tới $2^\ell - 1$ itemset con khác rỗng. Do đó, khi dữ liệu trở nên dày hơn, số lượng pattern trung gian và số itemset thỏa \texttt{minsup} có thể tăng phi tuyến.
+\begin{lstlisting}[caption={Kết quả chạy script kiểm tra thuật toán}, label={lst:algorithm-check-log}]
+[4/5] Comparing results...
+[PASSED] Basic dataset output matches expected.
+[PASSED] Special dataset output matches expected.
+[PASSED] Sparse dataset output matches expected.
+[PASSED] Infrequent-items dataset output matches expected.
+[PASSED] Duplicates-long dataset output matches expected.
 
-Ở cấu hình \texttt{avg\_len = 5}, output của nhóm là file rỗng. Nhóm đã kiểm tra riêng trường hợp này bằng SPMF với \texttt{minsup = 100}. Vì tập dữ liệu có 10,000 giao dịch, ngưỡng này tương đương 1\% tổng số giao dịch. SPMF ghi nhận \texttt{Minsup = 100} và số frequent itemset bằng 0. Do đó, output rỗng của nhóm ở trường hợp \texttt{avg\_len = 5} là hợp lý, không phải lỗi ghi file.
+========================================
+ Algorithm check PASSED
+========================================
+\end{lstlisting}
 
-Khi \texttt{avg\_len} tăng lên 80, số frequent itemset đạt 499,673 và runtime tăng lên rất lớn. Điều này phù hợp với lý thuyết: khi dữ liệu dense hơn, các item đồng xuất hiện nhiều hơn, làm phép giao N-list sinh ra nhiều kết quả đạt \texttt{minsup}. Đây là một trong những tình huống khó đối với các thuật toán FIM, kể cả khi đã có cơ chế tỉa theo tính chất Apriori.
+Tỉ lệ bộ dữ liệu vượt qua phép đối chiếu là:
 
-\subsection{Nhận xét chung, điểm mạnh/yếu và hướng tối ưu}
-\label{subsec:experiment-summary}
+\begin{equation}
+    \operatorname{PassRate}
+    =
+    \frac{5}{5}\times100\%
+    =
+    100\%.
+    \label{eq:level2-pass-rate}
+\end{equation}
 
-\subsubsection{Đối chiếu với yêu cầu thực nghiệm}
+Không nên gọi đại lượng này là \textit{accuracy}, vì đây không phải chỉ số đánh
+giá mô hình dự đoán. Kết quả cho thấy output của chương trình khớp expected
+output trên cả năm CSDL toy, bao gồm itemset và support tương ứng.
 
-Bảng~\ref{tab:experiment-checklist} tổng hợp mức độ đáp ứng các yêu cầu thực nghiệm chính.
+\subsection{Kiểm tra Level 3: so sánh phiên bản cơ bản và tối ưu}
+\label{subsec:level3-optimization}
+
+Level 3 yêu cầu áp dụng ít nhất một kỹ thuật tối ưu phù hợp với thuật toán và đo lường mức cải thiện so với bản cơ bản. Trong project này, kỹ thuật được dùng là tỉa sớm ứng viên trong quá trình giao N-list. Cụ thể, sau khi sinh N-list cho một ứng viên mở rộng, chương trình tính support ngay. Nếu support nhỏ hơn $\mathit{minsup}$, ứng viên đó không được đưa vào danh sách mở rộng tiếp theo.
+
+Script \path{run_optimization_check.ps1} được dùng để so sánh hai hàm
+\texttt{prepost\_basic} và \texttt{prepost\_optimized} trên năm CSDL toy.
+Với mỗi dataset, script ghi nhận số lượng itemset, trạng thái
+\texttt{match}, thời gian chạy của hai phiên bản và hệ số speedup.
+
+
+Kết quả được trình bày trong Bảng~\ref{tab:optimization-check-results}.
 
 \begin{table}[H]
 \centering
-\caption{Checklist đối chiếu yêu cầu thực nghiệm}
-\label{tab:experiment-checklist}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{p{0.32\textwidth}p{0.20\textwidth}p{0.12\textwidth}p{0.30\textwidth}}
+\caption{Kết quả so sánh phiên bản cơ bản và phiên bản tối ưu}
+\label{tab:optimization-check-results}
+\begin{tabular}{lccccc}
 \toprule
-Yêu cầu & Minh chứng & Trạng thái & Ghi chú \\
+Dataset & $\mathit{minsup}$ & Số FI & Match & Basic (s) & Optimized (s) \\
 \midrule
-Ít nhất 4 benchmark datasets & Bảng~\ref{tab:benchmark-datasets} & Đạt & Sử dụng \texttt{chess}, \texttt{mushroom}, \texttt{retail}, \texttt{T10I4D100K}. \\
-Correctness so với SPMF & Bảng~\ref{tab:correctness-results} & Đạt & Tỉ lệ khớp 100\%, không sai support. \\
-Runtime theo \texttt{minsup} & Hình~\ref{fig:runtime-chess}--\ref{fig:runtime-t10} & Đạt & Mỗi dataset có 6 mức \texttt{minsup}. \\
-Output size theo \texttt{minsup} & Hình~\ref{fig:output-size-chess}--\ref{fig:output-size-t10} & Đạt & Thể hiện quan hệ giữa \texttt{minsup} và số itemset sinh ra. \\
-Sử dụng bộ nhớ & Bảng~\ref{tab:memory-results}, Hình~\ref{fig:memory-usage} & Đạt có ghi chú & Dùng bộ nhớ cấp phát làm chỉ báo do peak RSS không đo trực tiếp được. \\
-Scalability 10/25/50/75/100 & Bảng~\ref{tab:scalability-results} & Đạt & Chạy trên tập \texttt{retail}. \\
-Ảnh hưởng độ dài giao dịch & Bảng~\ref{tab:transaction-length-results} & Đạt & Dữ liệu tổng hợp với \texttt{avg\_len} từ 5 đến 80. \\
-Biểu đồ rõ ràng & Các hình trong chương & Đạt & Runtime, output size, memory, scalability và transaction length. \\
-Phân tích kết quả & Toàn bộ Chương~\ref{sec:experiments} & Đạt & Có giải thích lý thuyết, so sánh với SPMF và hướng tối ưu. \\
+\texttt{toy\_basic} & 2 & 13 & true & 0.189 & 0.000 \\
+\texttt{toy\_special\_single\_path} & 2 & 15 & true & 0.081 & 0.000 \\
+\texttt{toy\_sparse} & 2 & 5 & true & 0.000 & 0.000 \\
+\texttt{toy\_with\_infrequent\_items} & 2 & 6 & true & 0.000 & 0.000 \\
+\texttt{toy\_duplicates\_long} & 2 & 15 & true & 0.000 & 0.000 \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular}
 \end{table}
 
-\subsubsection{Điểm mạnh và điểm yếu so với SPMF}
+Toàn bộ năm dataset đều có \texttt{match=true}, nghĩa là phiên bản tối ưu
+sinh cùng tập frequent itemset và support với phiên bản cơ bản. Kết quả này xác
+nhận tính tương đương đầu ra trên bộ kiểm thử hiện có, nhưng chưa đủ để chứng
+minh tương đương cho mọi đầu vào; vai trò đó cần được hỗ trợ thêm bởi lập luận
+thuật toán và các kiểm thử sinh ngẫu nhiên hoặc vét cạn trên CSDL nhỏ.
 
-So với SPMF, cài đặt của nhóm có một số điểm mạnh. Trước hết, kết quả correctness khớp 100\% với SPMF trên các benchmark được kiểm tra, cho thấy thuật toán sinh frequent itemset và tính support đúng. Thứ hai, nhóm có cả phiên bản basic và optimized, nhờ đó có thể đánh giá tác động của tỉa sớm đến thời gian chạy và bộ nhớ. Thứ ba, cài đặt được tổ chức rõ ràng theo các thành phần PPC-tree, N-list, tiền xử lý và khai thác, nên thuận lợi cho việc kiểm thử và mở rộng.
+Các giá trị thời gian bằng \texttt{0.000} xuất hiện vì thời gian chạy quá nhỏ so
+với số chữ số được ghi trong log, không nhất thiết vì đồng hồ không đủ độ phân
+giải. Do đó, không thể tính hoặc diễn giải speedup hữu ích từ bảng này; giá trị
+\texttt{Inf} chỉ là hệ quả của phép chia cho một số đã bị làm tròn thành 0.
+Để đo thời gian đáng tin cậy hơn cần:
+\begin{itemize}
+    \item chạy một lượt khởi động để loại ảnh hưởng biên dịch JIT;
+    \item lặp mỗi cấu hình nhiều lần và báo cáo median hoặc minimum ổn định;
+    \item đo trên benchmark đủ lớn;
+    \item đồng thời ghi nhận số phép giao N-list, số ứng viên trung gian và số
+          byte cấp phát, vì đây là các đại lượng gắn trực tiếp với tối ưu đang xét.
+\end{itemize}
 
-Tuy nhiên, cài đặt của nhóm vẫn có một số hạn chế so với SPMF. SPMF là thư viện đã được tối ưu lâu năm, có cách tổ chức dữ liệu, quản lý bộ nhớ và xử lý I/O hiệu quả hơn. Kết quả scalability cho thấy ở các subset lớn của \texttt{retail}, runtime của nhóm cao hơn SPMF. Ngoài ra, cài đặt của nhóm có thể còn tốn chi phí ở bước giao N-list, cấp phát nhiều cấu trúc trung gian và ghi toàn bộ output ra file, đặc biệt khi dữ liệu dense hoặc output size rất lớn như trường hợp \texttt{chess} và synthetic \texttt{avg\_len = 80}.
+Vì vậy, trong Chương này chỉ có thể kết luận rằng tối ưu bảo toàn kết quả trên
+năm CSDL toy. Kết luận về mức cải thiện thời gian hoặc bộ nhớ phải dựa trên
+Chương thực nghiệm.
 
-\subsubsection{Hướng tối ưu hóa tiếp theo}
+\subsection{Đáp ứng các mức yêu cầu cài đặt}
+\label{subsec:implementation-level-summary}
 
-Bản optimized hiện tại là kết quả nhóm đã thực hiện, do đó các hướng dưới đây được xem là những tối ưu có thể áp dụng tiếp theo:
+Bảng~\ref{tab:implementation-level-summary} tổng hợp mức độ đáp ứng các yêu cầu cài đặt.
 
-\begin{enumerate}
-    \item \textbf{Tối ưu phép giao N-list.} Có thể dùng kỹ thuật two-pointer merge trên các N-list đã sắp xếp, đồng thời pruning sớm nếu support tối đa còn lại không thể đạt \texttt{minsup}. Điều này giúp giảm số phép so sánh trong quá trình sinh itemset mở rộng.
-    \item \textbf{Tối ưu bộ nhớ của PPC-tree và N-list.} Có thể dùng mảng/vector thay cho dictionary hoặc object lồng nhau khi miền item được ánh xạ sang chỉ số liên tục; nén các trường \texttt{pre}, \texttt{post}, \texttt{count}; tái sử dụng buffer để giảm cấp phát lặp.
-    \item \textbf{Tối ưu I/O.} Khi output size lớn, chi phí ghi file có thể ảnh hưởng đáng kể đến runtime. Có thể bổ sung chế độ \texttt{count-only} để đo runtime khai thác không bao gồm chi phí ghi toàn bộ itemset, hoặc dùng buffered writing để giảm overhead I/O.
-    \item \textbf{Tái sử dụng kết quả trung gian.} Với các itemset có cùng tiền tố, có thể cache support hoặc reuse một phần N-list trung gian để tránh thực hiện lại các phép giao giống nhau.
-    \item \textbf{Song song hóa.} Các nhánh theo prefix trong quá trình khai thác có thể được xử lý tương đối độc lập. Vì vậy, có thể song song hóa theo nhánh prefix hoặc theo từng cặp dataset/\texttt{minsup} trong quá trình thực nghiệm.
-\end{enumerate}
+\begin{longtable}{p{0.13\textwidth}p{0.45\textwidth}p{0.31\textwidth}}
+\caption{Tổng hợp mức độ đáp ứng các yêu cầu cài đặt}
+\label{tab:implementation-level-summary}\\
+\toprule
+Mức & Yêu cầu & Kết quả thực hiện \\
+\midrule
+\endfirsthead
+\toprule
+Mức & Yêu cầu & Kết quả thực hiện \\
+\midrule
+\endhead
+Level 1 & Cài đặt đúng thuật toán, xuất toàn bộ frequent itemset và support tương ứng. & Đã cài đặt pipeline PrePost đầy đủ từ đọc dữ liệu, tiền xử lý, PPC-tree, N-list đến khai thác FI. Kết quả toy cơ sở sinh 13 FI và toy single-path sinh 15 FI, khớp expected. \\
+Level 2 & Kiểm thử tự động trên ít nhất 5 CSDL khác nhau, bao gồm CSDL từ ví dụ tay. & Đã kiểm thử trên 5 CSDL toy: basic, special single-path, sparse, infrequent-items và duplicates-long. Unit test đạt 103/103; algorithm check pass 5/5 dataset. \\
+Level 3 & Tối ưu hóa bộ nhớ/tốc độ và đo mức cải thiện so với bản cơ bản. &
+Đã cài đặt \texttt{prepost\_optimized} với tỉa sớm ngay sau phép giao N-list và
+xác nhận \texttt{match=true} trên 5/5 dataset. Bảng toy chưa đủ để định lượng
+speedup; số liệu benchmark và cấp phát bộ nhớ được trình bày ở Chương thực
+nghiệm. \\
+Level 4 & Hỗ trợ đọc input/output định dạng SPMF và tham số dòng lệnh cho $\mathit{minsup}$, input, output. & Đã có \texttt{read\_spmf}, \texttt{write\_spmf\_output} và CLI nhận \texttt{--input}, \texttt{--minsup}, \texttt{--output}. \\
+\bottomrule
+\end{longtable}
 
-\subsubsection{Giới hạn thực nghiệm}
+\subsection{Nhận xét về cài đặt}
+\label{subsec:implementation-discussion}
 
-Correctness được kiểm tra trên một mức \texttt{minsup} đại diện cho mỗi dataset benchmark, trong khi runtime và output size được đánh giá trên nhiều mức \texttt{minsup}. Ngoài ra, thí nghiệm transaction length sử dụng dữ liệu tổng hợp để phân tích xu hướng ảnh hưởng của độ dài giao dịch trung bình, không nhằm thay thế đánh giá trên dữ liệu thực tế. Kết quả runtime cũng có thể bị ảnh hưởng bởi cấu hình máy, trạng thái hệ thống, JVM warm-up của SPMF và chi phí ghi output ra file.
+Cài đặt hiện tại có một số ưu điểm chính. Thứ nhất, mã nguồn được chia module rõ ràng, giúp kiểm thử độc lập từng thành phần. Thứ hai, output được chuẩn hóa trước khi ghi và so sánh, nhờ đó việc kiểm tra kết quả không bị ảnh hưởng bởi thứ tự sinh itemset trong quá trình đệ quy. Thứ ba, project duy trì đồng thời phiên bản cơ bản và phiên bản tối ưu, cho phép kiểm tra chéo nội bộ trước khi đánh giá trên dữ liệu lớn.
 
-Tổng thể, các thí nghiệm cho thấy cài đặt của nhóm đạt tính đúng đắn so với SPMF và phản ánh đúng các xu hướng lý thuyết của bài toán FIM: giảm \texttt{minsup} làm tăng output size, dữ liệu dense tạo ra nhiều itemset hơn dữ liệu sparse, runtime và bộ nhớ phụ thuộc mạnh vào số pattern trung gian, và độ dài giao dịch trung bình có ảnh hưởng lớn đến chi phí khai thác.
+Tuy nhiên, bộ kiểm thử ở Chương này chủ yếu sử dụng dữ liệu toy nên chưa
+phản ánh hiệu năng trên dữ liệu lớn. Thời gian của lần gọi đầu còn có thể chứa
+chi phí biên dịch JIT của Julia; vì vậy số đo một lần trên dữ liệu rất nhỏ không
+phù hợp để kết luận về speedup~\cite{bezanson2017julia}. Phần đánh giá hiệu
+năng cần sử dụng benchmark lớn, nhiều mức $\mathit{minsup}$, chạy lặp, thống kê
+thời gian và cấp phát bộ nhớ, đồng thời đối chiếu kết quả với triển khai tham
+chiếu trong SPMF~\cite{fournier2014spmf,spmfwebsite}.
+
+\subsection{Khả năng tái lập}
+\label{subsec:implementation-reproducibility}
+
+Để các kết quả kiểm thử và thực nghiệm có thể được tái lập, báo cáo nên ghi rõ
+phiên bản Julia thực tế, nội dung \texttt{Project.toml}/\texttt{Manifest.toml},
+commit mã nguồn, tham số dòng lệnh, cấu hình phần cứng và phiên bản SPMF được
+dùng để đối chiếu. Các file expected output nên được quản lý cùng mã nguồn và
+được sinh hoặc kiểm chứng độc lập bằng liệt kê vét cạn trên CSDL toy. Khi đo
+hiệu năng, cần tách thời gian đọc file khỏi thời gian khai thác nếu mục tiêu là
+so sánh phần lõi thuật toán.
+
+\subsection{Kết luận chương}
+\label{subsec:implementation-conclusion}
+
+Chương này đã trình bày quá trình cài đặt thuật toán PrePost bằng Julia.
+Chương trình bao gồm các thành phần đọc dữ liệu, tiền xử lý, xây dựng PPC-tree,
+gán mã $pre/post$, tạo N-list, khai thác frequent itemset và xuất kết quả tương
+thích với quy ước output được sử dụng để đối chiếu SPMF. Các thành phần chức
+năng của Level 1, Level 2 và Level 4 đã được hiện thực và kiểm thử. Đối với
+Level 3, project đã có phiên bản tối ưu và đối chứng cơ bản; phần định lượng mức
+cải thiện được chuyển sang Chương thực nghiệm.
+
+Kết quả kiểm thử ghi nhận 103/103 unit test vượt qua. Script đối chiếu chạy
+thành công trên năm CSDL toy và toàn bộ output khớp expected output. Phiên bản
+tối ưu cũng trùng khớp với phiên bản cơ bản trên năm dataset. Các kết quả này
+cung cấp bằng chứng ban đầu về tính đúng đắn của cài đặt và là cơ sở để chuyển
+sang Chương thực nghiệm, nơi cần đánh giá thời gian, bộ nhớ và tính tương đương
+kết quả trên các benchmark lớn hơn.
